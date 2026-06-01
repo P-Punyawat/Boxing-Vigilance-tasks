@@ -10,19 +10,23 @@
 // ============================================================
 
 const CONFIG = {
-  digits:        [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  noGo:          3,
+  digits: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  noGo: 3,
   digitDuration: 250,   // ms — digit display time
+
+  // Paste your deployed Apps Script URL here to enable automatic sheet submission.
+  // Leave empty ('') to disable — CSV download will still work.
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbz_NBCePC2SbGPoYpJGe-YcotD_r4sA3RcQXgHG936uGVQLcp92iSsjuuB6VoGnA-9BQw/exec',
 
   practice: {
     repsPerDigit: 2,              // each digit appears this many times
-    fontSizes:    [72, 94],       // pt — randomly selected per trial
-    isis:         [1000, 2000],   // ms mask duration — randomly selected per trial
+    fontSizes: [72, 94],       // pt — randomly selected per trial
+    isis: [1000, 2000],   // ms mask duration — randomly selected per trial
   },
 
   test: {
     fontSizes: [48, 72, 94, 100, 120],    // pt
-    isis:      [1000, 1500, 2000],         // ms
+    isis: [1000, 1500, 2000],         // ms
     // Full factorial: each digit × each fontSize × each isi = 1 trial
     // 9 × 5 × 3 = 135 trials
   },
@@ -33,8 +37,8 @@ const CONFIG = {
 // ============================================================
 
 let participantId = '';
-let practiceData  = [];
-let testData      = [];
+let practiceData = [];
+let testData = [];
 
 // ============================================================
 //  Utilities
@@ -75,8 +79,8 @@ function generatePracticeTrials() {
       trials.push({
         digit,
         fontSize: randomFrom(CONFIG.practice.fontSizes),
-        isi:      randomFrom(CONFIG.practice.isis),
-        isNogo:   digit === CONFIG.noGo,
+        isi: randomFrom(CONFIG.practice.isis),
+        isNogo: digit === CONFIG.noGo,
       });
     }
   });
@@ -113,7 +117,7 @@ function render(html) {
 
 // Mask SVG — X inside circle (scaled to ~1.4× largest font to stay consistent)
 function maskSVG(size = 160) {
-  const r  = 44;
+  const r = 44;
   const cx = 50;
   const cy = 50;
   const pad = 28;
@@ -230,11 +234,11 @@ function showCountdown(label, onDone) {
 function showPracticeFeedback(data) {
   const s = analyzeData(data);
   const commClass = s.commissionErrors === 0 ? 'color-good'
-                  : s.commissionErrors <= 1  ? 'color-warn'
-                  :                            'color-bad';
-  const omClass   = s.omissionErrors === 0  ? 'color-good'
-                  : s.omissionErrors <= 2    ? 'color-warn'
-                  :                            'color-bad';
+    : s.commissionErrors <= 1 ? 'color-warn'
+      : 'color-bad';
+  const omClass = s.omissionErrors === 0 ? 'color-good'
+    : s.omissionErrors <= 2 ? 'color-warn'
+      : 'color-bad';
 
   const alerts = [];
   if (s.commissionErrors > 0) {
@@ -312,14 +316,20 @@ function showPracticeFeedback(data) {
 function showResults(data) {
   const s = analyzeData(data);
   const commPct = (s.commissionErrors / s.noGoTrials * 100).toFixed(1);
-  const omPct   = (s.omissionErrors   / s.goTrials  * 100).toFixed(1);
+  const omPct = (s.omissionErrors / s.goTrials * 100).toFixed(1);
 
-  const commClass = s.commissionErrors <= 2  ? 'color-good'
-                  : s.commissionErrors <= 5  ? 'color-warn'
-                  :                            'color-bad';
-  const omClass   = s.omissionErrors   <= 4  ? 'color-good'
-                  : s.omissionErrors   <= 10 ? 'color-warn'
-                  :                            'color-bad';
+  const commClass = s.commissionErrors <= 2 ? 'color-good'
+    : s.commissionErrors <= 5 ? 'color-warn'
+      : 'color-bad';
+  const omClass = s.omissionErrors <= 4 ? 'color-good'
+    : s.omissionErrors <= 10 ? 'color-warn'
+      : 'color-bad';
+
+  const submitRow = CONFIG.sheetUrl
+    ? `<div id="submit-status" class="submit-status">
+         <span class="status-pending">Submitting data&#8230;</span>
+       </div>`
+    : '';
 
   render(`
     <div class="screen instructions">
@@ -351,8 +361,10 @@ function showResults(data) {
         No-Go: ${s.noGoTrials} (${(s.noGoTrials / data.length * 100).toFixed(1)}%)
       </p>
 
+      ${submitRow}
+
       <div class="btn-group">
-        <button class="btn" id="btn-download">Download Data (CSV)</button>
+        <button class="btn" id="btn-download">Download CSV</button>
         <button class="btn btn-outline" id="btn-restart">Restart</button>
       </div>
     </div>
@@ -364,9 +376,19 @@ function showResults(data) {
 
   document.getElementById('btn-restart').addEventListener('click', () => {
     practiceData = [];
-    testData     = [];
+    testData = [];
     showWelcome();
   });
+
+  if (CONFIG.sheetUrl) {
+    submitToSheet([...practiceData, ...testData]).then(ok => {
+      const el = document.getElementById('submit-status');
+      if (!el) return;
+      el.innerHTML = ok
+        ? '<span class="status-ok">Data sent to sheet ✓</span>'
+        : '<span class="status-fail">Sheet submission failed — download CSV as backup</span>';
+    });
+  }
 }
 
 // ============================================================
@@ -392,7 +414,7 @@ function runBlock(trials, isPractice, onComplete) {
     runTrial(trials[idx], idx, trials.length, isPractice, overlay, result => {
       blockData.push({
         ...trials[idx],
-        block:    isPractice ? 'practice' : 'test',
+        block: isPractice ? 'practice' : 'test',
         trialNum: idx + 1,
         ...result,
       });
@@ -410,10 +432,10 @@ function runBlock(trials, isPractice, onComplete) {
 
 function runTrial(trial, index, total, isPractice, container, onComplete) {
   const progressPct = (index / total * 100).toFixed(2);
-  const trialLabel  = `${index + 1} / ${total}`;
+  const trialLabel = `${index + 1} / ${total}`;
 
   let responded = false;
-  let rt        = null;
+  let rt = null;
 
   // --- Show digit ---
   container.innerHTML = `
@@ -454,7 +476,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
 
       onComplete({
         responded,
-        rt:      responded ? Math.round(rt) : null,
+        rt: responded ? Math.round(rt) : null,
         outcome,
       });
     }, trial.isi);
@@ -467,27 +489,27 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
 // ============================================================
 
 function analyzeData(data) {
-  const goTrials   = data.filter(t => !t.isNogo);
-  const noGoTrials = data.filter(t =>  t.isNogo);
+  const goTrials = data.filter(t => !t.isNogo);
+  const noGoTrials = data.filter(t => t.isNogo);
 
-  const hits             = data.filter(t => t.outcome === 'hit');
-  const omissions        = data.filter(t => t.outcome === 'omission');
-  const commissions      = data.filter(t => t.outcome === 'commission');
+  const hits = data.filter(t => t.outcome === 'hit');
+  const omissions = data.filter(t => t.outcome === 'omission');
+  const commissions = data.filter(t => t.outcome === 'commission');
   const correctRejection = data.filter(t => t.outcome === 'correct_rejection');
 
   const rts = hits.map(t => t.rt).filter(v => v !== null);
 
   return {
-    total:             data.length,
-    goTrials:          goTrials.length,
-    noGoTrials:        noGoTrials.length,
-    hits:              hits.length,
-    omissionErrors:    omissions.length,
-    commissionErrors:  commissions.length,
+    total: data.length,
+    goTrials: goTrials.length,
+    noGoTrials: noGoTrials.length,
+    hits: hits.length,
+    omissionErrors: omissions.length,
+    commissionErrors: commissions.length,
     correctRejections: correctRejection.length,
-    correct:           hits.length + correctRejection.length,
-    meanRT:            mean(rts),
-    sdRT:              sd(rts),
+    correct: hits.length + correctRejection.length,
+    meanRT: mean(rts),
+    sdRT: sd(rts),
   };
 }
 
@@ -515,17 +537,49 @@ function exportCSV(data) {
     t.outcome,
   ]);
 
-  const csv  = [headers, ...rows].map(r => r.join(',')).join('\r\n');
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const ts   = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  a.href = url;
   a.download = `SART_${participantId}_${ts}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  Google Sheets submission
+// ============================================================
+
+async function submitToSheet(allData) {
+  if (!CONFIG.sheetUrl) return false;
+
+  const rows = allData.map(t => [
+    participantId,
+    t.block,
+    t.trialNum,
+    t.digit,
+    t.isNogo ? 1 : 0,
+    t.fontSize,
+    t.isi,
+    t.responded ? 1 : 0,
+    t.rt !== null ? t.rt : '',
+    t.outcome,
+  ]);
+
+  try {
+    const body = new FormData();
+    body.append('payload', JSON.stringify(rows));
+    // no-cors is required for Google Apps Script Web Apps called from a browser;
+    // the response will be opaque but the data still reaches the sheet.
+    await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ============================================================
