@@ -346,6 +346,7 @@ function showResults(data) {
       <div class="btn-group">
         <button class="btn" id="btn-download">Download CSV</button>
         <button class="btn btn-outline" id="btn-restart">Restart</button>
+        <a class="btn btn-outline" href="../">Task Selection</a>
       </div>
     </div>
   `);
