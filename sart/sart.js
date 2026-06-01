@@ -16,7 +16,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbz_NBCePC2SbGPoYpJGe-YcotD_r4sA3RcQXgHG936uGVQLcp92iSsjuuB6VoGnA-9BQw/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
 
   practice: {
     repsPerDigit: 2,              // each digit appears this many times
@@ -570,15 +570,10 @@ async function submitToSheet(allData) {
 
   try {
     const body = new FormData();
+    body.append('sheet', 'SART Data');
     body.append('payload', JSON.stringify(rows));
-    // no-cors is required for Google Apps Script Web Apps called from a browser.
-    // The response is always opaque (unreadable), and GAS redirects the POST
-    // internally which may throw a TypeError even when data reached the sheet.
-    // We treat any completed fetch attempt as a success; CSV is the true backup.
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-  } catch {
-    // Swallow — data typically reaches the sheet even when this throws.
-  }
+  } catch (_) { }
   return true;
 }
 

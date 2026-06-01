@@ -1,57 +1,59 @@
-// SART Data Collector - Google Apps Script
+// Combined Data Collector - Google Apps Script
+// Handles both SART and BART (and future tasks).
 //
 // Setup (one-time):
 //   1. Go to sheets.google.com -> create a New spreadsheet
-//      (name it e.g. "SART Data Collection")
+//      (name it e.g. "Cognitive Task Data")
 //   2. Inside that sheet: Extensions -> Apps Script
-//   3. Select ALL code in the editor (Ctrl+A / Cmd+A), delete it,
-//      then paste this entire file
+//   3. Select ALL code (Ctrl+A / Cmd+A), delete it, paste this file
 //   4. Deploy -> New deployment
 //        Type: Web app
 //        Execute as: Me
 //        Who has access: Anyone
-//   5. Copy the Web App URL
-//   6. Paste it into CONFIG.sheetUrl in sart/sart.js
+//   5. Copy the single Web App URL
+//   6. Paste it into CONFIG.sheetUrl in BOTH sart/sart.js and bart/bart.js
 //
-// The script will auto-create a "SART Data" tab with headers
-// on the first submission. No manual column setup needed.
+// Each task writes to its own tab ("SART Data", "BART Data").
+// Tabs and headers are created automatically on first submission.
 
-var SHEET_NAME = 'SART Data';
-
-var HEADERS = [
-  'timestamp',
-  'participant_id',
-  'block',
-  'trial_num',
-  'digit',
-  'is_nogo',
-  'font_size_pt',
-  'isi_ms',
-  'responded',
-  'rt_ms',
-  'outcome'
-];
+var HEADERS = {
+  'SART Data': [
+    'timestamp', 'participant_id', 'block', 'trial_num',
+    'digit', 'is_nogo', 'font_size_pt', 'isi_ms',
+    'responded', 'rt_ms', 'outcome'
+  ],
+  'BART Data': [
+    'timestamp', 'participant_id', 'block', 'balloon_num',
+    'pop_point', 'pumps', 'popped', 'earnings', 'permanent_bank_after'
+  ]
+};
 
 function doPost(e) {
   try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+    var sheetName = e.parameter.sheet;
+    var rows      = JSON.parse(e.parameter.payload);
+
+    if (!sheetName || !HEADERS[sheetName]) {
+      throw new Error('Unknown sheet: ' + sheetName);
+    }
+
+    var ss        = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet     = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+    var headers   = HEADERS[sheetName];
 
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(HEADERS);
-      sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+      sheet.appendRow(headers);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
       sheet.setFrozenRows(1);
     }
 
-    var rows      = JSON.parse(e.parameter.payload);
     var timestamp = new Date().toISOString();
-
     for (var i = 0; i < rows.length; i++) {
       sheet.appendRow([timestamp].concat(rows[i]));
     }
 
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'ok', n: rows.length }))
+      .createTextOutput(JSON.stringify({ status: 'ok', sheet: sheetName, n: rows.length }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
@@ -61,15 +63,20 @@ function doPost(e) {
   }
 }
 
-// Run this inside the Apps Script editor to test before going live.
-// It writes 4 dummy rows - check your sheet to confirm it worked.
+// Run inside the Apps Script editor to verify both tabs get created correctly.
 function testSheet() {
-  var mockRows = [
-    ['P_TEST', 'practice', 1, 5, 0, 72,  1000, 1, 342,  'hit'],
-    ['P_TEST', 'practice', 2, 3, 1, 94,  2000, 0, '',   'correct_rejection'],
-    ['P_TEST', 'test',     1, 7, 0, 100, 1500, 1, 289,  'hit'],
-    ['P_TEST', 'test',     2, 3, 1, 48,  1000, 1, 198,  'commission']
+  var sartRows = [
+    ['P_TEST', 'test', 1, 5, 0, 72,  1000, 1, 312, 'hit'],
+    ['P_TEST', 'test', 2, 3, 1, 94,  1500, 0, '',  'correct_rejection']
   ];
-  var e = { parameter: { payload: JSON.stringify(mockRows) } };
-  Logger.log(doPost(e).getContent());
+  var bartRows = [
+    ['P_TEST', 'test', 1, 42, 12, 0, '0.60', '0.60'],
+    ['P_TEST', 'test', 2, 10, 10, 1, '0.00', '0.60']
+  ];
+
+  var e1 = { parameter: { sheet: 'SART Data', payload: JSON.stringify(sartRows) } };
+  var e2 = { parameter: { sheet: 'BART Data', payload: JSON.stringify(bartRows) } };
+
+  Logger.log('SART: ' + doPost(e1).getContent());
+  Logger.log('BART: ' + doPost(e2).getContent());
 }

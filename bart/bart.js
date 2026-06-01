@@ -9,20 +9,20 @@
 // ============================================================
 
 const CONFIG = {
-  reward:   0.05,   // $ per pump
+  reward: 0.05,   // $ per pump
   maxPumps: 128,    // pre-determined pop range is [1, maxPumps]
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: '',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
 
   practice: { count: 2 },
-  test:     { count: 30 },
+  test: { count: 30 },
 
   timing: {
-    pumpDelay:    150,   // ms — delay between pump click and re-enabling buttons
+    pumpDelay: 150,   // ms — delay between pump click and re-enabling buttons
     intermission: 1500,  // ms — cash-in or popped graphic duration
-    iti:          1000,  // ms — blank screen between balloons
+    iti: 1000,  // ms — blank screen between balloons
   },
 };
 
@@ -46,9 +46,9 @@ const COLORS = [
 // ============================================================
 
 let participantId = '';
-let practiceData  = [];
-let testData      = [];
-let audioCtx      = null;
+let practiceData = [];
+let testData = [];
+let audioCtx = null;
 
 // ============================================================
 //  Utilities
@@ -92,8 +92,8 @@ function getAudioCtx() {
 
 function playTone(freq, startOffset, duration, type = 'sine', vol = 0.12) {
   try {
-    const ctx  = getAudioCtx();
-    const osc  = ctx.createOscillator();
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -104,33 +104,33 @@ function playTone(freq, startOffset, duration, type = 'sine', vol = 0.12) {
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
     osc.start(t);
     osc.stop(t + duration);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function playChing() {
   // Quick two-note ding
-  playTone(1320, 0,    0.09, 'sine', 0.12);
+  playTone(1320, 0, 0.09, 'sine', 0.12);
   playTone(1760, 0.07, 0.08, 'sine', 0.08);
 }
 
 function playPop() {
   // Burst of white noise
   try {
-    const ctx    = getAudioCtx();
+    const ctx = getAudioCtx();
     const frames = Math.floor(ctx.sampleRate * 0.14);
-    const buf    = ctx.createBuffer(1, frames, ctx.sampleRate);
-    const data   = buf.getChannelData(0);
+    const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const data = buf.getChannelData(0);
     for (let i = 0; i < frames; i++) {
       data[i] = (Math.random() * 2 - 1) * (1 - i / frames) * 0.5;
     }
-    const src  = ctx.createBufferSource();
+    const src = ctx.createBufferSource();
     const gain = ctx.createGain();
     src.buffer = buf;
     src.connect(gain);
     gain.connect(ctx.destination);
     gain.gain.value = 0.6;
     src.start();
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function playCashIn() {
@@ -257,7 +257,7 @@ function showWelcome() {
 
 function showPracticeFeedback(data) {
   const earned = data.filter(d => !d.popped).reduce((s, d) => s + d.earnings, 0);
-  const pops   = data.filter(d => d.popped).length;
+  const pops = data.filter(d => d.popped).length;
 
   render(`
     <div class="screen instructions">
@@ -302,14 +302,14 @@ function showPracticeFeedback(data) {
 // ============================================================
 
 function showResults(data) {
-  const nonPopped  = data.filter(d => !d.popped);
-  const popped     = data.filter(d => d.popped);
-  const adjAvg     = mean(nonPopped.map(d => d.pumps));
+  const nonPopped = data.filter(d => !d.popped);
+  const popped = data.filter(d => d.popped);
+  const adjAvg = mean(nonPopped.map(d => d.pumps));
   const totalEarned = data.reduce((s, d) => s + d.earnings, 0);
 
-  const popClass = popped.length <= 5  ? 'color-good'
-                 : popped.length <= 12 ? 'color-warn'
-                 :                       'color-bad';
+  const popClass = popped.length <= 5 ? 'color-good'
+    : popped.length <= 12 ? 'color-warn'
+      : 'color-bad';
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status">
@@ -356,7 +356,7 @@ function showResults(data) {
 
   document.getElementById('btn-restart').addEventListener('click', () => {
     practiceData = [];
-    testData     = [];
+    testData = [];
     showWelcome();
   });
 
@@ -373,9 +373,9 @@ function showResults(data) {
 // ============================================================
 
 function runBlock(count, isPractice, onComplete) {
-  const blockData    = [];
-  let idx            = 0;
-  let permanentBank  = 0;
+  const blockData = [];
+  let idx = 0;
+  let permanentBank = 0;
 
   function next() {
     if (idx >= count) {
@@ -384,10 +384,10 @@ function runBlock(count, isPractice, onComplete) {
     }
 
     runBalloon({
-      num:          idx + 1,
-      total:        count,
-      popPoint:     randomInt(1, CONFIG.maxPumps),
-      color:        randomColor(),
+      num: idx + 1,
+      total: count,
+      popPoint: randomInt(1, CONFIG.maxPumps),
+      color: randomColor(),
       isPractice,
       permanentBank,
     }, result => {
@@ -395,11 +395,11 @@ function runBlock(count, isPractice, onComplete) {
       if (!result.popped) permanentBank += earnings;
 
       blockData.push({
-        block:         isPractice ? 'practice' : 'test',
-        balloonNum:    idx + 1,
-        popPoint:      result.popPoint,
-        pumps:         result.pumps,
-        popped:        result.popped,
+        block: isPractice ? 'practice' : 'test',
+        balloonNum: idx + 1,
+        popPoint: result.popPoint,
+        pumps: result.pumps,
+        popped: result.popped,
         earnings,
         permanentBank,
       });
@@ -418,7 +418,7 @@ function runBlock(count, isPractice, onComplete) {
 
 function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, onComplete) {
   let pumps = 0;
-  let busy  = false;   // debounce — prevents double-clicks and key spam
+  let busy = false;   // debounce — prevents double-clicks and key spam
 
   // Full-viewport overlay
   const overlay = document.createElement('div');
@@ -439,8 +439,8 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
 
   function updateUI() {
     const scaleEl = document.getElementById('b-scale');
-    const tempEl  = document.getElementById('b-temp');
-    const colBtn  = document.getElementById('btn-collect');
+    const tempEl = document.getElementById('b-temp');
+    const colBtn = document.getElementById('btn-collect');
     if (scaleEl) {
       const s = 0.3 + (pumps / CONFIG.maxPumps) * 0.85;
       scaleEl.style.transform = `scale(${s})`;
@@ -448,7 +448,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
     if (tempEl) tempEl.textContent = fmt(tempEarnings());
     if (colBtn) {
       colBtn.textContent = `Collect ${fmt(tempEarnings())}`;
-      colBtn.disabled    = pumps === 0;
+      colBtn.disabled = pumps === 0;
     }
   }
 
@@ -599,10 +599,10 @@ async function submitToSheet(allData) {
 
   try {
     const body = new FormData();
+    body.append('sheet', 'BART Data');
     body.append('payload', JSON.stringify(rows));
-    // no-cors required for GAS Web Apps; response is opaque but data reaches the sheet.
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-  } catch (_) {}
+  } catch (_) { }
   return true;
 }
 
@@ -627,11 +627,11 @@ function exportCSV(data) {
     d.permanentBank.toFixed(2),
   ]);
 
-  const csv  = [headers, ...rows].map(r => r.join(',')).join('\r\n');
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = `BART_${participantId}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
   document.body.appendChild(a);
   a.click();
