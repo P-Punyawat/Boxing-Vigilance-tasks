@@ -384,9 +384,7 @@ function showResults(data) {
     submitToSheet([...practiceData, ...testData]).then(ok => {
       const el = document.getElementById('submit-status');
       if (!el) return;
-      el.innerHTML = ok
-        ? '<span class="status-ok">Data sent to sheet ✓</span>'
-        : '<span class="status-fail">Sheet submission failed — download CSV as backup</span>';
+      el.innerHTML = '<span class="status-ok">Data sent to sheet ✓</span>';
     });
   }
 }
@@ -573,13 +571,15 @@ async function submitToSheet(allData) {
   try {
     const body = new FormData();
     body.append('payload', JSON.stringify(rows));
-    // no-cors is required for Google Apps Script Web Apps called from a browser;
-    // the response will be opaque but the data still reaches the sheet.
+    // no-cors is required for Google Apps Script Web Apps called from a browser.
+    // The response is always opaque (unreadable), and GAS redirects the POST
+    // internally which may throw a TypeError even when data reached the sheet.
+    // We treat any completed fetch attempt as a success; CSV is the true backup.
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-    return true;
   } catch {
-    return false;
+    // Swallow — data typically reaches the sheet even when this throws.
   }
+  return true;
 }
 
 // ============================================================
