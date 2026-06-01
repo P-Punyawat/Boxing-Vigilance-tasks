@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cognitive Task Battery</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      color: #f0f0f0;
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      max-width: 600px;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 3rem;
+      letter-spacing: 0.1em;
+    }
+    .task-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .task-card {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 1.5rem 2rem;
+      text-align: left;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .task-card:hover {
+      border-color: #666;
+      background: #252525;
+    }
+    .task-card.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .task-name {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+    }
+    .task-abbr {
+      color: #888;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+    }
+    .task-desc {
+      font-size: 0.82rem;
+      color: #777;
+      margin-top: 0.5rem;
+      line-height: 1.5;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.08em;
+      float: right;
+    }
+    .badge-ready { background: #1b3a1b; color: #4CAF50; border: 1px solid #2e5e2e; }
+    .badge-soon  { background: #2a2a1a; color: #888; border: 1px solid #444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Cognitive Task Battery</h1>
+    <p class="subtitle">Select a task to begin</p>
+    <ul class="task-list">
+      <li>
+        <a class="task-card" href="sart/">
+          <span class="badge badge-ready">Ready</span>
+          <div class="task-name">Sustained Attention to Response Task</div>
+          <div class="task-abbr">SART &mdash; Robertson et al., 1997</div>
+          <div class="task-desc">Measure ability to withhold responses to infrequent targets during rapid rhythmic responding. 18 practice trials + 135 test trials (~4 min).</div>
+        </a>
+      </li>
+      <li>
+        <a class="task-card disabled" href="#">
+          <span class="badge badge-soon">Coming Soon</span>
+          <div class="task-name">Task 2</div>
+          <div class="task-abbr">TBD</div>
+          <div class="task-desc">Not yet implemented.</div>
+        </a>
+      </li>
+      <li>
+        <a class="task-card disabled" href="#">
+          <span class="badge badge-soon">Coming Soon</span>
+          <div class="task-name">Task 3</div>
+          <div class="task-abbr">TBD</div>
+          <div class="task-desc">Not yet implemented.</div>
+        </a>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>
