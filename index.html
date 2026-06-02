@@ -39,6 +39,13 @@
       flex-direction: column;
       gap: 1rem;
     }
+    .task-section {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #444;
+      margin: 0.6rem 0 -0.2rem;
+    }
     .task-card {
       background: #1e1e1e;
       border: 1px solid #333;
@@ -109,11 +116,19 @@
         </a>
       </li>
       <li>
-        <a class="task-card disabled" href="#">
-          <span class="badge badge-soon">Coming Soon</span>
-          <div class="task-name">Task 3</div>
-          <div class="task-abbr">TBD</div>
-          <div class="task-desc">Not yet implemented.</div>
+        <a class="task-card" href="mot-speed/">
+          <span class="badge badge-ready">Ready</span>
+          <div class="task-name">Multi-Object Tracking &mdash; Speed</div>
+          <div class="task-abbr">MOT Speed &mdash; Pylyshyn &amp; Storm, 1988</div>
+          <div class="task-desc">Track 4 targets among 8 identical moving circles. Speed adapts via 3-Down/1-Up staircase to measure your visual tracking limit. 8 practice + up to 30 test trials (~10 min).</div>
+        </a>
+      </li>
+      <li>
+        <a class="task-card" href="mot-target/">
+          <span class="badge badge-ready">Ready</span>
+          <div class="task-name">Multi-Object Tracking &mdash; Capacity</div>
+          <div class="task-abbr">MOT Capacity &mdash; Pylyshyn &amp; Storm, 1988</div>
+          <div class="task-desc">How many objects can you track at once? Target count adapts via 2-Down/1-Up staircase (1–6 targets among 10 circles). 8 practice + up to 40 test trials (~12 min).</div>
         </a>
       </li>
     </ul>

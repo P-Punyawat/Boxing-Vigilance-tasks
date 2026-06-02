@@ -1,20 +1,20 @@
 // Combined Data Collector - Google Apps Script
-// Handles both SART and BART (and future tasks).
+// Handles SART, BART, MOT Speed, and MOT Capacity.
 //
 // Setup (one-time):
 //   1. Go to sheets.google.com -> create a New spreadsheet
 //      (name it e.g. "Cognitive Task Data")
 //   2. Inside that sheet: Extensions -> Apps Script
 //   3. Select ALL code (Ctrl+A / Cmd+A), delete it, paste this file
-//   4. Deploy -> New deployment
+//   4. Deploy -> New deployment  (or Manage deployments -> Edit to update an existing one)
 //        Type: Web app
 //        Execute as: Me
 //        Who has access: Anyone
 //   5. Copy the single Web App URL
-//   6. Paste it into CONFIG.sheetUrl in BOTH sart/sart.js and bart/bart.js
+//   6. Paste it into CONFIG.sheetUrl in sart/sart.js, bart/bart.js,
+//      mot-speed/mot-speed.js, and mot-target/mot-target.js
 //
-// Each task writes to its own tab ("SART Data", "BART Data").
-// Tabs and headers are created automatically on first submission.
+// Each task writes to its own tab. Tabs and headers are created automatically.
 
 var HEADERS = {
   'SART Data': [
@@ -25,6 +25,16 @@ var HEADERS = {
   'BART Data': [
     'timestamp', 'participant_id', 'block', 'balloon_num',
     'pop_point', 'pumps', 'popped', 'earnings', 'permanent_bank_after'
+  ],
+  'MOT Speed Data': [
+    'timestamp', 'participant_id', 'block', 'trial_num',
+    'num_targets', 'speed_px_s', 'correct', 'reversal_count',
+    'selected_ids', 'target_ids'
+  ],
+  'MOT Capacity Data': [
+    'timestamp', 'participant_id', 'block', 'trial_num',
+    'num_targets', 'speed_px_s', 'correct', 'reversal_count',
+    'selected_ids', 'target_ids'
   ]
 };
 
@@ -63,7 +73,7 @@ function doPost(e) {
   }
 }
 
-// Run inside the Apps Script editor to verify both tabs get created correctly.
+// Run inside the Apps Script editor to verify all tabs get created correctly.
 function testSheet() {
   var sartRows = [
     ['P_TEST', 'test', 1, 5, 0, 72,  1000, 1, 312, 'hit'],
@@ -73,10 +83,22 @@ function testSheet() {
     ['P_TEST', 'test', 1, 42, 12, 0, '0.60', '0.60'],
     ['P_TEST', 'test', 2, 10, 10, 1, '0.00', '0.60']
   ];
+  var motSpeedRows = [
+    ['P_TEST', 'practice', 1, 4, 200, 1, '', '2;3', '0;1;2;3'],
+    ['P_TEST', 'test',     2, 4, 300, 0,  0, '1;2', '0;1;2;3']
+  ];
+  var motCapRows = [
+    ['P_TEST', 'practice', 1, 3, 200, 1, '', '0;4;7', '0;4;7'],
+    ['P_TEST', 'test',     2, 4, 280, 1,  0, '1;3;5;8', '1;3;5;8']
+  ];
 
-  var e1 = { parameter: { sheet: 'SART Data', payload: JSON.stringify(sartRows) } };
-  var e2 = { parameter: { sheet: 'BART Data', payload: JSON.stringify(bartRows) } };
+  var e1 = { parameter: { sheet: 'SART Data',         payload: JSON.stringify(sartRows)     } };
+  var e2 = { parameter: { sheet: 'BART Data',         payload: JSON.stringify(bartRows)     } };
+  var e3 = { parameter: { sheet: 'MOT Speed Data',    payload: JSON.stringify(motSpeedRows) } };
+  var e4 = { parameter: { sheet: 'MOT Capacity Data', payload: JSON.stringify(motCapRows)   } };
 
-  Logger.log('SART: ' + doPost(e1).getContent());
-  Logger.log('BART: ' + doPost(e2).getContent());
+  Logger.log('SART:         ' + doPost(e1).getContent());
+  Logger.log('BART:         ' + doPost(e2).getContent());
+  Logger.log('MOT Speed:    ' + doPost(e3).getContent());
+  Logger.log('MOT Capacity: ' + doPost(e4).getContent());
 }

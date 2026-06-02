@@ -1,0 +1,319 @@
+/* ============================================================
+   MOT Speed — Reset & base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; }
+
+body {
+  background: #1a1a1a;
+  color: #f0f0f0;
+  font-family: 'Courier New', Courier, monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  width: 100%;
+  max-width: 680px;
+  padding: 2rem;
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.screen { animation: fadeIn 0.25s ease; }
+
+/* ============================================================
+   Instruction / result screens
+   ============================================================ */
+.instructions {
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: left;
+}
+.instructions h1 {
+  font-size: 1.7rem;
+  margin-bottom: 0.3rem;
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+.task-subtitle {
+  text-align: center;
+  color: #666;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+}
+.instructions h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #888;
+  margin: 1.4rem 0 0.5rem;
+}
+.instructions p {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: #ccc;
+  margin-bottom: 0.7rem;
+}
+.instructions ul {
+  padding-left: 1.4rem;
+  margin-bottom: 0.7rem;
+}
+.instructions li {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: #ccc;
+}
+.rule-box {
+  background: #222;
+  border-left: 3px solid #3a7bd5;
+  border-radius: 0 4px 4px 0;
+  padding: 0.9rem 1.2rem;
+  margin: 1.2rem 0;
+}
+.rule-box p { margin: 0 0 0.4rem; font-size: 0.88rem; }
+.rule-box p:last-child { margin-bottom: 0; }
+
+/* ============================================================
+   Version choice radios
+   ============================================================ */
+.version-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.6rem 0 1rem;
+}
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #ccc;
+  cursor: pointer;
+}
+.radio-label input[type="radio"] { cursor: pointer; accent-color: #3a7bd5; }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  display: inline-block;
+  margin-top: 1.8rem;
+  padding: 0.7rem 2.2rem;
+  background: #f0f0f0;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  transition: background 0.12s;
+  text-decoration: none;
+}
+.btn:hover { background: #d8d8d8; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-outline {
+  background: transparent;
+  color: #888;
+  border: 1px solid #555;
+  margin-left: 0.8rem;
+}
+.btn-outline:hover { color: #ddd; border-color: #888; background: transparent; }
+.btn-group {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.8rem;
+}
+
+/* ============================================================
+   Participant ID input
+   ============================================================ */
+.input-group { margin: 1.5rem auto 0.5rem; max-width: 280px; }
+.input-group label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #777;
+  margin-bottom: 0.5rem;
+}
+.input-group input {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: #242424;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #f0f0f0;
+  font-size: 0.95rem;
+  font-family: inherit;
+  text-align: center;
+}
+.input-group input:focus { outline: none; border-color: #888; }
+
+/* ============================================================
+   Stats / Results
+   ============================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+  max-width: 480px;
+  margin: 1.5rem auto;
+}
+.stat-box {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+}
+.stat-value { font-size: 2.2rem; font-weight: bold; margin-bottom: 0.25rem; line-height: 1; }
+.stat-label { font-size: 0.68rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.4; }
+.stat-sub   { font-size: 0.62rem; color: #666; margin-top: 0.15rem; }
+.color-good    .stat-value { color: #4CAF50; }
+.color-warn    .stat-value { color: #FFC107; }
+.color-bad     .stat-value { color: #f44336; }
+.color-neutral .stat-value { color: #64B5F6; }
+
+/* ============================================================
+   Submission status
+   ============================================================ */
+.submit-status {
+  text-align: center;
+  margin: 0.8rem 0 0;
+  min-height: 1.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.status-pending { color: #666; }
+.status-ok      { color: #4CAF50; }
+.status-fail    { color: #FFC107; }
+
+/* ============================================================
+   Back link
+   ============================================================ */
+.back-link {
+  position: fixed;
+  top: 1rem;
+  left: 1.2rem;
+  font-size: 0.72rem;
+  color: #555;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.back-link:hover { color: #aaa; }
+
+/* ============================================================
+   MOT Trial Overlay
+   ============================================================ */
+.mot-overlay {
+  position: fixed;
+  inset: 0;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem 1rem;
+}
+
+.mot-top {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.mot-phase {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.mot-trial {
+  font-size: 0.72rem;
+  color: #555;
+  letter-spacing: 0.06em;
+}
+
+.practice-tag {
+  font-size: 0.6rem;
+  background: #2a2a1a;
+  color: #aaa;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.08em;
+  margin-left: 0.4rem;
+}
+
+.mot-arena {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0.4rem 0;
+}
+
+#arena {
+  display: block;
+  width: min(700px, calc(100vw - 2.4rem));
+  aspect-ratio: 700 / 480;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+}
+
+.mot-bottom {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.mot-selection {
+  font-size: 0.78rem;
+  color: #888;
+  letter-spacing: 0.06em;
+  min-height: 1.1em;
+}
+
+.mot-timer-wrap {
+  width: 100%;
+  height: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mot-timer {
+  height: 100%;
+  width: 100%;
+  background: #3a7bd5;
+  transition: background 0.3s;
+}
+
+.confirm-btn {
+  margin-top: 0.4rem;
+  padding: 0.55rem 2.4rem;
+  font-size: 0.85rem;
+}
