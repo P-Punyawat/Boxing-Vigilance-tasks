@@ -178,12 +178,12 @@ function drawArena(ctx, objs, phase, hoveredId) {
     // Fill
     ctx.beginPath();
     ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
-    if (phase === 'cue' && o.isTarget) ctx.fillStyle = 'rgba(231,76,60,0.22)';
-    else if (phase === 'response' && o.selected) ctx.fillStyle = 'rgba(58,157,229,0.18)';
-    else if (phase === 'response' && hov) ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    else if (phase === 'feedback' && o.isTarget && o.selected) ctx.fillStyle = 'rgba(76,175,80,0.22)';
-    else if (phase === 'feedback' && o.isTarget && !o.selected) ctx.fillStyle = 'rgba(244,67,54,0.22)';
-    else if (phase === 'feedback' && !o.isTarget && o.selected) ctx.fillStyle = 'rgba(255,193,7,0.18)';
+    if (phase === 'cue' && o.isTarget) ctx.fillStyle = 'rgba(231,76,60,0.55)';
+    else if (phase === 'response' && o.selected) ctx.fillStyle = 'rgba(58,157,229,0.55)';
+    else if (phase === 'response' && hov) ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    else if (phase === 'feedback' && o.isTarget && o.selected) ctx.fillStyle = 'rgba(76,175,80,0.55)';
+    else if (phase === 'feedback' && o.isTarget && !o.selected) ctx.fillStyle = 'rgba(244,67,54,0.55)';
+    else if (phase === 'feedback' && !o.isTarget && o.selected) ctx.fillStyle = 'rgba(255,193,7,0.45)';
     else ctx.fillStyle = '#242424';
     ctx.fill();
 
@@ -340,8 +340,8 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const { x, y } = canvasXY(e);
     const o = circleAt(x, y);
     if (!o) return;
-    if (selected.has(o.id)) selected.delete(o.id);
-    else selected.add(o.id);
+    if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
+    else                    { selected.add(o.id);    o.selected = true;  }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
