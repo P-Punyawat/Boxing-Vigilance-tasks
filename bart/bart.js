@@ -14,7 +14,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
 
   practice: { count: 2 },
   test: { count: 30 },
@@ -304,52 +304,12 @@ function showPracticeFeedback(data) {
 function showResults(data) {
   const nonPopped = data.filter(d => !d.popped);
   const popped = data.filter(d => d.popped);
-<<<<<<< Updated upstream
   const adjAvg = mean(nonPopped.map(d => d.pumps));
   const totalEarned = data.reduce((s, d) => s + d.earnings, 0);
 
   const popClass = popped.length <= 5 ? 'color-good'
     : popped.length <= 12 ? 'color-warn'
       : 'color-bad';
-=======
-  const totalEarned = data.reduce((s, d) => s + d.earnings, 0);
-  const adjAvg = mean(nonPopped.map(d => d.pumps));
-  const allPumps = data.map(d => d.pumps);
-  const sdPumps = sd(allPumps);
-  const meanPumps = mean(allPumps);
-  const popRate = data.length ? popped.length / data.length : 0;
-  const optimal = (CONFIG.maxPumps + 1) / 2;
-
-  // Block analysis
-  const mid = Math.floor(data.length / 2);
-  const earlyAAVG = mean(data.slice(0, mid).filter(d => !d.popped).map(d => d.pumps));
-  const lateAAVG = mean(data.slice(mid).filter(d => !d.popped).map(d => d.pumps));
-
-  // Post-explosion shift: pumps on trial after a pop vs adjusted average
-  const postPopShifts = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i - 1].popped) postPopShifts.push(data[i].pumps - (adjAvg ?? meanPumps ?? 0));
-  }
-  const meanPostPopShift = mean(postPopShifts);
-
-  // Validity flags
-  const flags = [];
-  if (popped.length >= data.length * 0.8)
-    flags.push('⚠ >80% of balloons popped — extreme risk-taking or possible misunderstanding of task.');
-  if (nonPopped.length === 0)
-    flags.push('⚠ No balloons collected — all popped; adjusted average is unavailable.');
-  if (adjAvg !== null && adjAvg <= 2)
-    flags.push('⚠ Very low pump rate — participant may have been extremely risk-averse or disengaged.');
-  if (sdPumps !== null && sdPumps < 2 && data.length > 5)
-    flags.push('⚠ Near-identical pump counts across balloons — unusually low variability.');
-
-  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
-
-  const popClass = popped.length <= 5 ? 'color-good' : popped.length <= 12 ? 'color-warn' : 'color-bad';
-  const riskClass = adjAvg !== null
-    ? (Math.abs(adjAvg - optimal) < 15 ? 'color-good' : Math.abs(adjAvg - optimal) < 30 ? 'color-warn' : 'color-bad')
-    : 'color-neutral';
->>>>>>> Stashed changes
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status">
@@ -391,30 +351,8 @@ function showResults(data) {
     </div>
   `);
 
-<<<<<<< Updated upstream
   document.getElementById('btn-download').addEventListener('click', () => {
     exportCSV([...practiceData, ...testData]);
-=======
-  // Radar dimensions (all 0–1)
-  const earningsNorm = Math.min(1, totalEarned / 45);
-  const riskCalib = adjAvg !== null ? Math.max(0, 1 - Math.abs(adjAvg - optimal) / optimal) : 0;
-  const survivalNorm = 1 - popRate;
-  const consistNorm = sdPumps !== null ? Math.max(0, 1 - sdPumps / 40) : 0;
-  const recoveryNorm = meanPostPopShift !== null
-    ? Math.min(1, Math.max(0, 0.5 - meanPostPopShift / (2 * optimal)))
-    : 0.5;
-  const stabilityNorm = (earlyAAVG !== null && lateAAVG !== null && Math.max(earlyAAVG, lateAAVG) > 0)
-    ? Math.max(0, 1 - Math.abs(earlyAAVG - lateAAVG) / Math.max(earlyAAVG, lateAAVG))
-    : 0.5;
-
-  const labels = ['Earnings', 'Risk Calib.', 'Survival', 'Consistency', 'Recovery', 'Stability'];
-  const you = [earningsNorm, riskCalib, survivalNorm, consistNorm, recoveryNorm, stabilityNorm];
-  const ref = [0.70, 0.60, 0.65, 0.60, 0.65, 0.70];
-
-  requestAnimationFrame(() => {
-    const canvas = document.getElementById('radar-canvas');
-    if (canvas) drawRadar(canvas, labels, you, ref);
->>>>>>> Stashed changes
   });
 
   document.getElementById('btn-restart').addEventListener('click', () => {
