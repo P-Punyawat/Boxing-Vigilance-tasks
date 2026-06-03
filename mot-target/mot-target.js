@@ -92,6 +92,12 @@ function mean(arr) {
   return arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
 }
 
+function sd(arr) {
+  if (arr.length < 2) return null;
+  const m = mean(arr);
+  return Math.sqrt(arr.map(x => (x - m) ** 2).reduce((a, b) => a + b, 0) / (arr.length - 1));
+}
+
 function median(arr) {
   if (!arr.length) return 0;
   const s = [...arr].sort((a, b) => a - b);
@@ -609,13 +615,49 @@ function showPracticeFeedback(data) {
   });
 }
 
+function computeMOTCapacityAdvanced(data) {
+  const test = data.filter(d => d.block === 'test');
+  if (!test.length) return null;
+
+  const nC    = test.filter(d => d.correct).length;
+  const acc   = nC / test.length;
+  const mid   = Math.floor(test.length / 2);
+  const h1Acc = mid > 0 ? test.slice(0, mid).filter(d => d.correct).length / mid : null;
+  const h2Acc = (test.length - mid) > 0 ? test.slice(mid).filter(d => d.correct).length / (test.length - mid) : null;
+
+  const revTargets = SC.reversalTargets;
+  const revMean    = revTargets.length ? mean(revTargets) : null;
+  const revSd      = sd(revTargets);
+  const revCv      = (revMean && revSd) ? revSd / revMean : null;
+
+  return { acc, h1Acc, h2Acc, revMean, revSd, revCv };
+}
+
 function showResults(data) {
   const kValue = computeKValue();
-  const nCorrect = data.filter(d => d.correct).length;
-  const pct = (nCorrect / data.length * 100).toFixed(1);
+  const adv    = computeMOTCapacityAdvanced(data) || {};
+  const test   = data.filter(d => d.block === 'test');
+  const nCorrect = test.filter(d => d.correct).length;
+  const pct    = test.length ? (nCorrect / test.length * 100).toFixed(1) : '—';
   const modeLabel = testMode === 'adaptive'
-    ? `Stopped at ${SC.reversalCount} reversals`
-    : `Fixed 40-trial test`;
+    ? `Adaptive · ${SC.reversalCount} reversals`
+    : `Fixed · ${test.length} trials`;
+
+  const kClass   = kValue >= 4 ? 'color-good' : kValue >= 2.5 ? 'color-warn' : 'color-bad';
+  const accClass = adv.acc >= 0.75 ? 'color-good' : adv.acc >= 0.55 ? 'color-warn' : 'color-bad';
+
+  // Validity flags
+  const flags = [];
+  if (adv.acc !== undefined && adv.acc < 0.20)
+    flags.push('⚠ Accuracy < 20% — participant may not have understood the task.');
+  if (kValue >= CONFIG.test.maxTargets)
+    flags.push('⚠ K-value at ceiling — tracking capacity limit not found; consider higher max targets.');
+  if (kValue <= CONFIG.test.minTargets + 0.1)
+    flags.push('⚠ K-value at floor — very poor tracking performance or engagement issue.');
+  if (adv.h1Acc !== null && adv.h2Acc !== null && (adv.h1Acc - adv.h2Acc) > 0.20)
+    flags.push(`⚠ Fatigue effect: accuracy dropped ${((adv.h1Acc - adv.h2Acc) * 100).toFixed(0)}% in the second half.`);
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status"><span class="status-pending">Submitting&#8230;</span></div>`
@@ -626,22 +668,47 @@ function showResults(data) {
       <h1 style="text-align:center;font-size:1.3rem">Test Complete</h1>
       <p class="task-subtitle">Participant: ${escapeHtml(participantId)}</p>
 
-      <div class="stats-grid">
-        <div class="stat-box color-neutral">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:560px">
+        <div class="stat-box ${kClass}">
           <div class="stat-value">${kValue.toFixed(1)}</div>
           <div class="stat-label">K-Value<div class="stat-sub">tracking capacity (objects)</div></div>
         </div>
-        <div class="stat-box color-neutral">
+        <div class="stat-box ${accClass}">
           <div class="stat-value">${pct}%</div>
-          <div class="stat-label">Accuracy<div class="stat-sub">${nCorrect} / ${data.length} trials</div></div>
-        </div>
-        <div class="stat-box color-neutral">
-          <div class="stat-value">${data.length}</div>
-          <div class="stat-label">Trials<div class="stat-sub">${modeLabel}</div></div>
+          <div class="stat-label">Accuracy<div class="stat-sub">${nCorrect} / ${test.length} trials</div></div>
         </div>
         <div class="stat-box color-neutral">
           <div class="stat-value">${SC.reversalCount}</div>
-          <div class="stat-label">Reversals</div>
+          <div class="stat-label">Reversals<div class="stat-sub">${modeLabel}</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.h1Acc !== null ? (adv.h1Acc * 100).toFixed(0) + '%' : '—'}</div>
+          <div class="stat-label">Block 1 Acc<div class="stat-sub">first half</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.h2Acc !== null ? (adv.h2Acc * 100).toFixed(0) + '%' : '—'}</div>
+          <div class="stat-label">Block 2 Acc<div class="stat-sub">second half</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.revCv !== null ? adv.revCv.toFixed(2) : '—'}</div>
+          <div class="stat-label">Reversal CV<div class="stat-sub">staircase stability</div></div>
+        </div>
+      </div>
+
+      <div class="secondary-metrics">
+        <div class="metric-pill">Reversal targets <strong>${adv.revMean !== null ? adv.revMean.toFixed(1) : '—'}</strong></div>
+        <div class="metric-pill">Rev. SD <strong>${adv.revSd !== null ? adv.revSd.toFixed(1) : '—'}</strong></div>
+        <div class="metric-pill">Current target count <strong>${SC.targetCount}</strong></div>
+        <div class="metric-pill">Mode <strong>${testMode}</strong></div>
+      </div>
+
+      ${flagHtml}
+
+      <div class="radar-section">
+        <canvas id="radar-canvas" width="260" height="260"></canvas>
+        <div class="radar-legend">
+          <span class="legend-you">▪ You</span>
+          <span class="legend-ref">▪ Reference</span>
         </div>
       </div>
 
@@ -655,13 +722,33 @@ function showResults(data) {
     </div>
   `);
 
+  // Radar dimensions
+  const kRange    = CONFIG.test.maxTargets - CONFIG.test.minTargets;
+  const kNorm     = kRange > 0 ? Math.min(1, Math.max(0, (kValue - CONFIG.test.minTargets) / kRange)) : 0.5;
+  const accNorm   = adv.acc ?? 0;
+  const h1Norm    = adv.h1Acc ?? 0;
+  const h2Norm    = adv.h2Acc ?? 0;
+  const stabilNorm = adv.revCv !== null ? Math.max(0, 1 - adv.revCv) : 0.5;
+  const effNorm   = testMode === 'adaptive'
+    ? Math.max(0, 1 - (test.length / CONFIG.staircase.maxTrials))
+    : accNorm;
+
+  const labels = ['K-Value', 'Accuracy', 'Block 1', 'Block 2', 'Stability', 'Efficiency'];
+  const you    = [kNorm, accNorm, h1Norm, h2Norm, stabilNorm, effNorm];
+  const ref    = [0.40, 0.72, 0.72, 0.68, 0.60, 0.55];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
+  });
+
   document.getElementById('btn-dl').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => { practiceData = []; testData = []; showWelcome(); });
 
   if (CONFIG.sheetUrl) {
     submitToSheet([...practiceData, ...testData]).then(() => {
       const el = document.getElementById('submit-status');
-      if (el) el.innerHTML = '<span class="status-ok">Data sent &#10003;</span>';
+      if (el) el.innerHTML = '<span class="status-ok">Data sent ✓</span>';
     });
   }
 }
@@ -702,6 +789,76 @@ async function submitToSheet(data) {
     body.append('payload', JSON.stringify(rows));
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
   } catch (_) { }
+}
+
+// ============================================================
+//  Radar / Spider chart
+// ============================================================
+
+function drawRadar(canvas, labels, you, ref) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) / 2 - 36;
+  const N = labels.length;
+  const step = (2 * Math.PI) / N;
+  const startAngle = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  for (let r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const x = cx + Math.cos(a) * R * (r / 4);
+      const y = cy + Math.sin(a) * R * (r / 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  const polygon = (vals, strokeColor, fillColor) => {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const r = R * Math.max(0, Math.min(1, vals[i]));
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  };
+
+  polygon(ref, '#444', 'rgba(80,80,80,0.15)');
+  polygon(you, '#3a9de5', 'rgba(58,157,229,0.18)');
+
+  ctx.fillStyle = '#777';
+  ctx.font = '10px Courier New, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    const lx = cx + Math.cos(a) * (R + 22);
+    const ly = cy + Math.sin(a) * (R + 22);
+    ctx.fillText(labels[i], lx, ly);
+  }
 }
 
 // ============================================================

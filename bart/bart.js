@@ -67,6 +67,12 @@ function mean(arr) {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
+function sd(arr) {
+  if (arr.length < 2) return null;
+  const m = mean(arr);
+  return Math.sqrt(arr.map(x => (x - m) ** 2).reduce((a, b) => a + b, 0) / (arr.length - 1));
+}
+
 function randomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)];
 }
@@ -302,19 +308,48 @@ function showPracticeFeedback(data) {
 // ============================================================
 
 function showResults(data) {
-  const nonPopped = data.filter(d => !d.popped);
-  const popped = data.filter(d => d.popped);
-  const adjAvg = mean(nonPopped.map(d => d.pumps));
+  const nonPopped   = data.filter(d => !d.popped);
+  const popped      = data.filter(d => d.popped);
   const totalEarned = data.reduce((s, d) => s + d.earnings, 0);
+  const adjAvg      = mean(nonPopped.map(d => d.pumps));
+  const allPumps    = data.map(d => d.pumps);
+  const sdPumps     = sd(allPumps);
+  const meanPumps   = mean(allPumps);
+  const popRate     = data.length ? popped.length / data.length : 0;
+  const optimal     = (CONFIG.maxPumps + 1) / 2;
 
-  const popClass = popped.length <= 5 ? 'color-good'
-    : popped.length <= 12 ? 'color-warn'
-      : 'color-bad';
+  // Block analysis
+  const mid       = Math.floor(data.length / 2);
+  const earlyAAVG = mean(data.slice(0, mid).filter(d => !d.popped).map(d => d.pumps));
+  const lateAAVG  = mean(data.slice(mid).filter(d => !d.popped).map(d => d.pumps));
+
+  // Post-explosion shift: pumps on trial after a pop vs adjusted average
+  const postPopShifts = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i - 1].popped) postPopShifts.push(data[i].pumps - (adjAvg ?? meanPumps ?? 0));
+  }
+  const meanPostPopShift = mean(postPopShifts);
+
+  // Validity flags
+  const flags = [];
+  if (popped.length >= data.length * 0.8)
+    flags.push('⚠ >80% of balloons popped — extreme risk-taking or possible misunderstanding of task.');
+  if (nonPopped.length === 0)
+    flags.push('⚠ No balloons collected — all popped; adjusted average is unavailable.');
+  if (adjAvg !== null && adjAvg <= 2)
+    flags.push('⚠ Very low pump rate — participant may have been extremely risk-averse or disengaged.');
+  if (sdPumps !== null && sdPumps < 2 && data.length > 5)
+    flags.push('⚠ Near-identical pump counts across balloons — unusually low variability.');
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
+
+  const popClass  = popped.length <= 5  ? 'color-good' : popped.length <= 12 ? 'color-warn' : 'color-bad';
+  const riskClass = adjAvg !== null
+    ? (Math.abs(adjAvg - optimal) < 15 ? 'color-good' : Math.abs(adjAvg - optimal) < 30 ? 'color-warn' : 'color-bad')
+    : 'color-neutral';
 
   const submitRow = CONFIG.sheetUrl
-    ? `<div id="submit-status" class="submit-status">
-         <span class="status-pending">Submitting data&#8230;</span>
-       </div>`
+    ? `<div id="submit-status" class="submit-status"><span class="status-pending">Submitting data&#8230;</span></div>`
     : '';
 
   render(`
@@ -322,22 +357,47 @@ function showResults(data) {
       <h1 style="text-align:center;font-size:1.3rem">Task Complete</h1>
       <p class="task-subtitle">Participant: ${escapeHtml(participantId)}</p>
 
-      <div class="stats-grid">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:560px">
         <div class="stat-box color-neutral">
           <div class="stat-value">${fmt(totalEarned)}</div>
           <div class="stat-label">Total Earnings</div>
         </div>
-        <div class="stat-box color-neutral">
+        <div class="stat-box ${riskClass}">
           <div class="stat-value">${adjAvg !== null ? adjAvg.toFixed(1) : '&#8212;'}</div>
-          <div class="stat-label">Adj. Avg Pumps<div class="stat-sub">non-popped balloons only</div></div>
+          <div class="stat-label">Adj. Avg Pumps<div class="stat-sub">non-popped · optimal ≈${Math.round(optimal)}</div></div>
         </div>
         <div class="stat-box ${popClass}">
           <div class="stat-value">${popped.length}</div>
-          <div class="stat-label">Explosions<div class="stat-sub">out of ${data.length}</div></div>
+          <div class="stat-label">Explosions<div class="stat-sub">${(popRate * 100).toFixed(0)}% of balloons</div></div>
         </div>
         <div class="stat-box color-neutral">
           <div class="stat-value">${nonPopped.length}</div>
-          <div class="stat-label">Successful<div class="stat-sub">balloons collected</div></div>
+          <div class="stat-label">Collected<div class="stat-sub">of ${data.length} balloons</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${meanPumps !== null ? meanPumps.toFixed(1) : '—'}</div>
+          <div class="stat-label">Mean Pumps<div class="stat-sub">all balloons · SD ${sdPumps !== null ? sdPumps.toFixed(1) : '—'}</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${meanPostPopShift !== null ? (meanPostPopShift >= 0 ? '+' : '') + meanPostPopShift.toFixed(1) : '—'}</div>
+          <div class="stat-label">Post-Pop Shift<div class="stat-sub">pumps Δ after explosion</div></div>
+        </div>
+      </div>
+
+      <div class="secondary-metrics">
+        <div class="metric-pill">Early AAVG <strong>${earlyAAVG !== null ? earlyAAVG.toFixed(1) : '—'}</strong></div>
+        <div class="metric-pill">Late AAVG <strong>${lateAAVG !== null ? lateAAVG.toFixed(1) : '—'}</strong></div>
+        <div class="metric-pill">Pop rate <strong>${(popRate * 100).toFixed(0)}%</strong></div>
+        <div class="metric-pill">Survival rate <strong>${((1 - popRate) * 100).toFixed(0)}%</strong></div>
+      </div>
+
+      ${flagHtml}
+
+      <div class="radar-section">
+        <canvas id="radar-canvas" width="260" height="260"></canvas>
+        <div class="radar-legend">
+          <span class="legend-you">▪ You</span>
+          <span class="legend-ref">▪ Reference</span>
         </div>
       </div>
 
@@ -351,10 +411,28 @@ function showResults(data) {
     </div>
   `);
 
-  document.getElementById('btn-download').addEventListener('click', () => {
-    exportCSV([...practiceData, ...testData]);
+  // Radar dimensions (all 0–1)
+  const earningsNorm = Math.min(1, totalEarned / 45);
+  const riskCalib    = adjAvg !== null ? Math.max(0, 1 - Math.abs(adjAvg - optimal) / optimal) : 0;
+  const survivalNorm = 1 - popRate;
+  const consistNorm  = sdPumps !== null ? Math.max(0, 1 - sdPumps / 40) : 0;
+  const recoveryNorm = meanPostPopShift !== null
+    ? Math.min(1, Math.max(0, 0.5 - meanPostPopShift / (2 * optimal)))
+    : 0.5;
+  const stabilityNorm = (earlyAAVG !== null && lateAAVG !== null && Math.max(earlyAAVG, lateAAVG) > 0)
+    ? Math.max(0, 1 - Math.abs(earlyAAVG - lateAAVG) / Math.max(earlyAAVG, lateAAVG))
+    : 0.5;
+
+  const labels = ['Earnings', 'Risk Calib.', 'Survival', 'Consistency', 'Recovery', 'Stability'];
+  const you    = [earningsNorm, riskCalib, survivalNorm, consistNorm, recoveryNorm, stabilityNorm];
+  const ref    = [0.70, 0.60, 0.65, 0.60, 0.65, 0.70];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
   });
 
+  document.getElementById('btn-download').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => {
     practiceData = [];
     testData = [];
@@ -364,7 +442,7 @@ function showResults(data) {
   if (CONFIG.sheetUrl) {
     submitToSheet([...practiceData, ...testData]).then(() => {
       const el = document.getElementById('submit-status');
-      if (el) el.innerHTML = '<span class="status-ok">Data sent to sheet &#10003;</span>';
+      if (el) el.innerHTML = '<span class="status-ok">Data sent to sheet ✓</span>';
     });
   }
 }
@@ -638,6 +716,76 @@ function exportCSV(data) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  Radar / Spider chart
+// ============================================================
+
+function drawRadar(canvas, labels, you, ref) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) / 2 - 36;
+  const N = labels.length;
+  const step = (2 * Math.PI) / N;
+  const startAngle = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  for (let r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const x = cx + Math.cos(a) * R * (r / 4);
+      const y = cy + Math.sin(a) * R * (r / 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  const polygon = (vals, strokeColor, fillColor) => {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const r = R * Math.max(0, Math.min(1, vals[i]));
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  };
+
+  polygon(ref, '#444', 'rgba(80,80,80,0.15)');
+  polygon(you, '#3a9de5', 'rgba(58,157,229,0.18)');
+
+  ctx.fillStyle = '#777';
+  ctx.font = '10px Courier New, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    const lx = cx + Math.cos(a) * (R + 22);
+    const ly = cy + Math.sin(a) * (R + 22);
+    ctx.fillText(labels[i], lx, ly);
+  }
 }
 
 // ============================================================

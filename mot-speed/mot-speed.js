@@ -91,6 +91,12 @@ function mean(arr) {
   return arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
 }
 
+function sd(arr) {
+  if (arr.length < 2) return null;
+  const m = mean(arr);
+  return Math.sqrt(arr.map(x => (x - m) ** 2).reduce((a, b) => a + b, 0) / (arr.length - 1));
+}
+
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -589,13 +595,53 @@ function showPracticeFeedback(data) {
   });
 }
 
+function computeMOTAdvanced(data) {
+  const test = data.filter(d => d.block === 'test');
+  if (!test.length) return null;
+
+  const nC     = test.filter(d => d.correct).length;
+  const acc    = nC / test.length;
+  const mid    = Math.floor(test.length / 2);
+  const h1Acc  = mid > 0 ? test.slice(0, mid).filter(d => d.correct).length / mid : null;
+  const h2Acc  = (test.length - mid) > 0 ? test.slice(mid).filter(d => d.correct).length / (test.length - mid) : null;
+
+  const revSpeeds = SC.reversalSpeeds;
+  const revMean   = revSpeeds.length ? mean(revSpeeds) : null;
+  const revSd     = sd(revSpeeds);
+  const revCv     = (revMean && revSd) ? revSd / revMean : null;
+
+  const speeds  = test.map(d => d.speed);
+  const spdMean = mean(speeds);
+  const spdSd   = sd(speeds);
+
+  return { acc, h1Acc, h2Acc, revMean, revSd, revCv, spdMean, spdSd };
+}
+
 function showResults(data) {
   const threshold = computeThreshold();
-  const nCorrect = data.filter(d => d.correct).length;
-  const pct = (nCorrect / data.length * 100).toFixed(1);
+  const adv       = computeMOTAdvanced(data) || {};
+  const test      = data.filter(d => d.block === 'test');
+  const nCorrect  = test.filter(d => d.correct).length;
+  const pct       = test.length ? (nCorrect / test.length * 100).toFixed(1) : '—';
   const modeLabel = testMode === 'adaptive'
-    ? `Stopped at ${SC.reversalCount} reversals`
-    : `Fixed 30-trial test`;
+    ? `Adaptive · ${SC.reversalCount} reversals`
+    : `Fixed · ${test.length} trials`;
+
+  const accClass   = adv.acc >= 0.75 ? 'color-good' : adv.acc >= 0.55 ? 'color-warn' : 'color-bad';
+  const spdClass   = threshold >= 400 ? 'color-good' : threshold >= 200 ? 'color-warn' : 'color-bad';
+
+  // Validity flags
+  const flags = [];
+  if (adv.acc !== undefined && adv.acc < 0.20)
+    flags.push('⚠ Accuracy < 20% — participant may not have understood the task.');
+  if (threshold >= CONFIG.speed.max * 0.95)
+    flags.push('⚠ Threshold at speed ceiling — task may be too easy; consider a harder version.');
+  if (threshold <= CONFIG.speed.min * 1.05)
+    flags.push('⚠ Threshold at speed floor — extremely poor tracking or possible engagement issue.');
+  if (adv.h1Acc !== null && adv.h2Acc !== null && (adv.h1Acc - adv.h2Acc) > 0.20)
+    flags.push(`⚠ Fatigue effect: accuracy dropped ${((adv.h1Acc - adv.h2Acc) * 100).toFixed(0)}% in the second half.`);
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status"><span class="status-pending">Submitting&#8230;</span></div>`
@@ -606,22 +652,47 @@ function showResults(data) {
       <h1 style="text-align:center;font-size:1.3rem">Test Complete</h1>
       <p class="task-subtitle">Participant: ${escapeHtml(participantId)}</p>
 
-      <div class="stats-grid">
-        <div class="stat-box color-neutral">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:560px">
+        <div class="stat-box ${spdClass}">
           <div class="stat-value">${Math.round(threshold)}</div>
-          <div class="stat-label">Threshold Speed<div class="stat-sub">px / s &mdash; visual tracking limit</div></div>
+          <div class="stat-label">Threshold<div class="stat-sub">px/s · speed limit</div></div>
         </div>
-        <div class="stat-box color-neutral">
+        <div class="stat-box ${accClass}">
           <div class="stat-value">${pct}%</div>
-          <div class="stat-label">Accuracy<div class="stat-sub">${nCorrect} / ${data.length} trials</div></div>
-        </div>
-        <div class="stat-box color-neutral">
-          <div class="stat-value">${data.length}</div>
-          <div class="stat-label">Trials<div class="stat-sub">${modeLabel}</div></div>
+          <div class="stat-label">Accuracy<div class="stat-sub">${nCorrect} / ${test.length} trials</div></div>
         </div>
         <div class="stat-box color-neutral">
           <div class="stat-value">${SC.reversalCount}</div>
-          <div class="stat-label">Reversals</div>
+          <div class="stat-label">Reversals<div class="stat-sub">${modeLabel}</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.h1Acc !== null ? (adv.h1Acc * 100).toFixed(0) + '%' : '—'}</div>
+          <div class="stat-label">Block 1 Acc<div class="stat-sub">first half</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.h2Acc !== null ? (adv.h2Acc * 100).toFixed(0) + '%' : '—'}</div>
+          <div class="stat-label">Block 2 Acc<div class="stat-sub">second half</div></div>
+        </div>
+        <div class="stat-box color-neutral">
+          <div class="stat-value">${adv.revCv !== null ? adv.revCv.toFixed(2) : '—'}</div>
+          <div class="stat-label">Reversal CV<div class="stat-sub">staircase stability</div></div>
+        </div>
+      </div>
+
+      <div class="secondary-metrics">
+        <div class="metric-pill">Reversal speeds <strong>${adv.revMean !== null ? Math.round(adv.revMean) + ' px/s' : '—'}</strong></div>
+        <div class="metric-pill">Rev. SD <strong>${adv.revSd !== null ? Math.round(adv.revSd) + ' px/s' : '—'}</strong></div>
+        <div class="metric-pill">Mean trial speed <strong>${adv.spdMean !== null ? Math.round(adv.spdMean) + ' px/s' : '—'}</strong></div>
+        <div class="metric-pill">Mode <strong>${testMode}</strong></div>
+      </div>
+
+      ${flagHtml}
+
+      <div class="radar-section">
+        <canvas id="radar-canvas" width="260" height="260"></canvas>
+        <div class="radar-legend">
+          <span class="legend-you">▪ You</span>
+          <span class="legend-ref">▪ Reference</span>
         </div>
       </div>
 
@@ -635,13 +706,32 @@ function showResults(data) {
     </div>
   `);
 
+  // Radar: Speed Score, Accuracy, Block 1, Block 2, Stability, Efficiency
+  const speedNorm  = Math.min(1, Math.max(0, (threshold - CONFIG.speed.min) / (CONFIG.speed.max - CONFIG.speed.min)));
+  const accNorm    = adv.acc ?? 0;
+  const h1Norm     = adv.h1Acc ?? 0;
+  const h2Norm     = adv.h2Acc ?? 0;
+  const stabilNorm = adv.revCv !== null ? Math.max(0, 1 - adv.revCv) : 0.5;
+  const effNorm    = testMode === 'adaptive'
+    ? Math.max(0, 1 - (test.length / CONFIG.staircase.maxTrials))
+    : accNorm;
+
+  const labels = ['Speed', 'Accuracy', 'Block 1', 'Block 2', 'Stability', 'Efficiency'];
+  const you    = [speedNorm, accNorm, h1Norm, h2Norm, stabilNorm, effNorm];
+  const ref    = [0.45, 0.75, 0.75, 0.70, 0.65, 0.60];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
+  });
+
   document.getElementById('btn-dl').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => { practiceData = []; testData = []; showWelcome(); });
 
   if (CONFIG.sheetUrl) {
     submitToSheet([...practiceData, ...testData]).then(() => {
       const el = document.getElementById('submit-status');
-      if (el) el.innerHTML = '<span class="status-ok">Data sent &#10003;</span>';
+      if (el) el.innerHTML = '<span class="status-ok">Data sent ✓</span>';
     });
   }
 }
@@ -682,6 +772,76 @@ async function submitToSheet(data) {
     body.append('payload', JSON.stringify(rows));
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
   } catch (_) { }
+}
+
+// ============================================================
+//  Radar / Spider chart
+// ============================================================
+
+function drawRadar(canvas, labels, you, ref) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) / 2 - 36;
+  const N = labels.length;
+  const step = (2 * Math.PI) / N;
+  const startAngle = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  for (let r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const x = cx + Math.cos(a) * R * (r / 4);
+      const y = cy + Math.sin(a) * R * (r / 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  const polygon = (vals, strokeColor, fillColor) => {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const r = R * Math.max(0, Math.min(1, vals[i]));
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  };
+
+  polygon(ref, '#444', 'rgba(80,80,80,0.15)');
+  polygon(you, '#3a9de5', 'rgba(58,157,229,0.18)');
+
+  ctx.fillStyle = '#777';
+  ctx.font = '10px Courier New, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    const lx = cx + Math.cos(a) * (R + 22);
+    const ly = cy + Math.sin(a) * (R + 22);
+    ctx.fillText(labels[i], lx, ly);
+  }
 }
 
 // ============================================================

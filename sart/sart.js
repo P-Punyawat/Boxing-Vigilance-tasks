@@ -68,6 +68,17 @@ function sd(arr) {
   return Math.sqrt(arr.map(x => (x - m) ** 2).reduce((a, b) => a + b, 0) / (arr.length - 1));
 }
 
+// Inverse normal CDF (Abramowitz & Stegun approximation)
+function probit(p) {
+  p = Math.max(0.001, Math.min(0.999, p));
+  const a = [2.515517, 0.802853, 0.010328];
+  const b = [1.432788, 0.189269, 0.001308];
+  const t = Math.sqrt(-2 * Math.log(p <= 0.5 ? p : 1 - p));
+  const num = a[0] + a[1] * t + a[2] * t * t;
+  const den = 1 + b[0] * t + b[1] * t * t + b[2] * t * t * t;
+  return (p <= 0.5 ? -1 : 1) * (t - num / den);
+}
+
 // ============================================================
 //  Trial generation
 // ============================================================
@@ -315,20 +326,32 @@ function showPracticeFeedback(data) {
 
 function showResults(data) {
   const s = analyzeData(data);
-  const commPct = (s.commissionErrors / s.noGoTrials * 100).toFixed(1);
-  const omPct = (s.omissionErrors / s.goTrials * 100).toFixed(1);
+  const commPct = (s.faRate * 100).toFixed(1);
+  const omPct   = s.goTrials ? (s.omissionErrors / s.goTrials * 100).toFixed(1) : '0.0';
+  const crPct   = s.noGoTrials ? (s.correctRejections / s.noGoTrials * 100).toFixed(1) : '—';
 
-  const commClass = s.commissionErrors <= 2 ? 'color-good'
-    : s.commissionErrors <= 5 ? 'color-warn'
-      : 'color-bad';
-  const omClass = s.omissionErrors <= 4 ? 'color-good'
-    : s.omissionErrors <= 10 ? 'color-warn'
-      : 'color-bad';
+  const commClass = s.commissionErrors <= 2 ? 'color-good' : s.commissionErrors <= 5 ? 'color-warn' : 'color-bad';
+  const omClass   = s.omissionErrors   <= 4 ? 'color-good' : s.omissionErrors   <= 10 ? 'color-warn' : 'color-bad';
+  const dClass    = s.dPrime >= 2.5 ? 'color-good' : s.dPrime >= 1.0 ? 'color-warn' : 'color-bad';
+  const cvClass   = s.cv !== null && s.cv <= 0.3 ? 'color-good' : s.cv !== null && s.cv <= 0.5 ? 'color-warn' : 'color-bad';
+
+  // Validity flags
+  const flags = [];
+  if (s.meanRT !== null && s.meanRT < 100)
+    flags.push('⚠ Mean RT < 100ms — responses may be anticipatory or accidental.');
+  if (s.faRate > 0.5)
+    flags.push('⚠ Commission rate > 50% — participant may have misunderstood the task (should withhold on 3).');
+  if (s.goTrials && s.omissionErrors / s.goTrials > 0.5)
+    flags.push('⚠ Omission rate > 50% — low engagement or possible technical issue.');
+  if (s.dPrime < 0)
+    flags.push('⚠ d′ < 0 — below-chance discrimination; data likely invalid.');
+  if (s.h1Acc !== null && s.h2Acc !== null && (s.h1Acc - s.h2Acc) > 0.15)
+    flags.push(`⚠ Vigilance decrement: accuracy dropped ${((s.h1Acc - s.h2Acc) * 100).toFixed(0)}% from first to second half.`);
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
 
   const submitRow = CONFIG.sheetUrl
-    ? `<div id="submit-status" class="submit-status">
-         <span class="status-pending">Submitting data&#8230;</span>
-       </div>`
+    ? `<div id="submit-status" class="submit-status"><span class="status-pending">Submitting data&#8230;</span></div>`
     : '';
 
   render(`
@@ -336,29 +359,53 @@ function showResults(data) {
       <h1 style="text-align:center; font-size:1.3rem">Task Complete</h1>
       <p class="task-subtitle">Participant: ${escapeHtml(participantId)}</p>
 
-      <div class="stats-grid">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:560px">
         <div class="stat-box color-neutral">
           <div class="stat-value">${(s.correct / data.length * 100).toFixed(1)}%</div>
           <div class="stat-label">Overall Accuracy</div>
         </div>
         <div class="stat-box color-neutral">
-          <div class="stat-value">${s.meanRT !== null ? Math.round(s.meanRT) + 'ms' : '—'}</div>
-          <div class="stat-label">Mean RT<div class="stat-sub">correct Go · SD ${s.sdRT !== null ? Math.round(s.sdRT) : '—'}ms</div></div>
+          <div class="stat-value">${s.meanRT !== null ? Math.round(s.meanRT) : '—'}<span style="font-size:1rem">ms</span></div>
+          <div class="stat-label">Mean RT<div class="stat-sub">SD ${s.sdRT !== null ? Math.round(s.sdRT) : '—'}ms</div></div>
+        </div>
+        <div class="stat-box ${dClass}">
+          <div class="stat-value">${s.dPrime.toFixed(2)}</div>
+          <div class="stat-label">d′<div class="stat-sub">signal detection</div></div>
         </div>
         <div class="stat-box ${commClass}">
           <div class="stat-value">${s.commissionErrors}</div>
-          <div class="stat-label">Commission Errors<div class="stat-sub">pressed on 3 · ${commPct}% of No-Go</div></div>
+          <div class="stat-label">Commission Errors<div class="stat-sub">FA rate ${commPct}%</div></div>
         </div>
         <div class="stat-box ${omClass}">
           <div class="stat-value">${s.omissionErrors}</div>
-          <div class="stat-label">Omission Errors<div class="stat-sub">missed digit · ${omPct}% of Go</div></div>
+          <div class="stat-label">Omission Errors<div class="stat-sub">miss rate ${omPct}%</div></div>
+        </div>
+        <div class="stat-box ${cvClass}">
+          <div class="stat-value">${s.cv !== null ? s.cv.toFixed(2) : '—'}</div>
+          <div class="stat-label">RT Variability<div class="stat-sub">coeff. of variation</div></div>
         </div>
       </div>
 
-      <p class="result-meta">
-        Total trials: ${data.length} &nbsp;|&nbsp;
-        Go: ${s.goTrials} &nbsp;|&nbsp;
-        No-Go: ${s.noGoTrials} (${(s.noGoTrials / data.length * 100).toFixed(1)}%)
+      <div class="secondary-metrics">
+        <div class="metric-pill">Post-error slowing <strong>${s.pes !== null ? (s.pes >= 0 ? '+' : '') + Math.round(s.pes) + 'ms' : '—'}</strong></div>
+        <div class="metric-pill">Block 1 acc <strong>${s.h1Acc !== null ? (s.h1Acc * 100).toFixed(0) + '%' : '—'}</strong></div>
+        <div class="metric-pill">Block 2 acc <strong>${s.h2Acc !== null ? (s.h2Acc * 100).toFixed(0) + '%' : '—'}</strong></div>
+        <div class="metric-pill">Hit rate <strong>${(s.hitRate * 100).toFixed(1)}%</strong></div>
+        <div class="metric-pill">CR rate <strong>${crPct}%</strong></div>
+      </div>
+
+      ${flagHtml}
+
+      <div class="radar-section">
+        <canvas id="radar-canvas" width="260" height="260"></canvas>
+        <div class="radar-legend">
+          <span class="legend-you">▪ You</span>
+          <span class="legend-ref">▪ Reference</span>
+        </div>
+      </div>
+
+      <p class="result-meta" style="margin-top:1rem">
+        Total trials: ${data.length} &nbsp;|&nbsp; Go: ${s.goTrials} &nbsp;|&nbsp; No-Go: ${s.noGoTrials}
       </p>
 
       ${submitRow}
@@ -371,10 +418,26 @@ function showResults(data) {
     </div>
   `);
 
-  document.getElementById('btn-download').addEventListener('click', () => {
-    exportCSV([...practiceData, ...testData]);
+  // Radar dimensions (all normalized 0–1)
+  const hitNorm  = Math.min(1, s.hitRate);
+  const crNorm   = s.noGoTrials ? s.correctRejections / s.noGoTrials : 0;
+  const spdNorm  = s.meanRT !== null ? Math.min(1, Math.max(0, (800 - s.meanRT) / 600)) : 0;
+  const conNorm  = s.cv !== null ? Math.min(1, Math.max(0, 1 - s.cv)) : 0;
+  const dNorm    = Math.min(1, Math.max(0, s.dPrime / 4.0));
+  const vigNorm  = (s.h1Acc !== null && s.h2Acc !== null)
+    ? Math.min(1, Math.max(0, 1 - Math.max(0, s.h1Acc - s.h2Acc) * 3))
+    : 0.8;
+
+  const labels = ['Hit Rate', 'Inhibition', 'Speed', 'Consistency', 'd′', 'Vigilance'];
+  const you    = [hitNorm, crNorm, spdNorm, conNorm, dNorm, vigNorm];
+  const ref    = [0.90, 0.85, 0.70, 0.65, 0.75, 0.80];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
   });
 
+  document.getElementById('btn-download').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => {
     practiceData = [];
     testData = [];
@@ -382,10 +445,9 @@ function showResults(data) {
   });
 
   if (CONFIG.sheetUrl) {
-    submitToSheet([...practiceData, ...testData]).then(ok => {
+    submitToSheet([...practiceData, ...testData]).then(() => {
       const el = document.getElementById('submit-status');
-      if (!el) return;
-      el.innerHTML = '<span class="status-ok">Data sent to sheet ✓</span>';
+      if (el) el.innerHTML = '<span class="status-ok">Data sent to sheet ✓</span>';
     });
   }
 }
@@ -488,15 +550,39 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
 // ============================================================
 
 function analyzeData(data) {
-  const goTrials = data.filter(t => !t.isNogo);
-  const noGoTrials = data.filter(t => t.isNogo);
-
-  const hits = data.filter(t => t.outcome === 'hit');
-  const omissions = data.filter(t => t.outcome === 'omission');
+  const goTrials    = data.filter(t => !t.isNogo);
+  const noGoTrials  = data.filter(t => t.isNogo);
+  const hits        = data.filter(t => t.outcome === 'hit');
+  const omissions   = data.filter(t => t.outcome === 'omission');
   const commissions = data.filter(t => t.outcome === 'commission');
-  const correctRejection = data.filter(t => t.outcome === 'correct_rejection');
+  const correctRej  = data.filter(t => t.outcome === 'correct_rejection');
 
-  const rts = hits.map(t => t.rt).filter(v => v !== null);
+  const rts  = hits.map(t => t.rt).filter(v => v !== null);
+  const mRT  = mean(rts);
+  const sRT  = sd(rts);
+  const cv   = (mRT && sRT) ? sRT / mRT : null;
+
+  const hitRate = goTrials.length   ? hits.length        / goTrials.length   : 0;
+  const faRate  = noGoTrials.length ? commissions.length / noGoTrials.length : 0;
+  const dPrime  = probit(hitRate) - probit(faRate);
+
+  // First-half vs second-half accuracy (vigilance decrement)
+  const mid = Math.floor(data.length / 2);
+  const blockAcc = d => {
+    if (!d.length) return null;
+    return d.filter(t => t.outcome === 'hit' || t.outcome === 'correct_rejection').length / d.length;
+  };
+  const h1Acc = blockAcc(data.slice(0, mid));
+  const h2Acc = blockAcc(data.slice(mid));
+
+  // Post-Error Slowing: mean RT on hit trials immediately after a commission
+  const pesRTs = [], baseRTs = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i].outcome === 'hit' && data[i].rt !== null) {
+      (data[i - 1].outcome === 'commission' ? pesRTs : baseRTs).push(data[i].rt);
+    }
+  }
+  const pes = (pesRTs.length && baseRTs.length) ? mean(pesRTs) - mean(baseRTs) : null;
 
   return {
     total: data.length,
@@ -505,10 +591,11 @@ function analyzeData(data) {
     hits: hits.length,
     omissionErrors: omissions.length,
     commissionErrors: commissions.length,
-    correctRejections: correctRejection.length,
-    correct: hits.length + correctRejection.length,
-    meanRT: mean(rts),
-    sdRT: sd(rts),
+    correctRejections: correctRej.length,
+    correct: hits.length + correctRej.length,
+    meanRT: mRT, sdRT: sRT, cv,
+    hitRate, faRate, dPrime,
+    h1Acc, h2Acc, pes,
   };
 }
 
@@ -576,6 +663,79 @@ async function submitToSheet(allData) {
     await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
   } catch (_) { }
   return true;
+}
+
+// ============================================================
+//  Radar / Spider chart
+// ============================================================
+
+function drawRadar(canvas, labels, you, ref) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) / 2 - 36;
+  const N = labels.length;
+  const step = (2 * Math.PI) / N;
+  const startAngle = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid rings
+  for (let r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const x = cx + Math.cos(a) * R * (r / 4);
+      const y = cy + Math.sin(a) * R * (r / 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Spokes
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  const polygon = (vals, strokeColor, fillColor) => {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i * step;
+      const r = R * Math.max(0, Math.min(1, vals[i]));
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  };
+
+  polygon(ref, '#444', 'rgba(80,80,80,0.15)');
+  polygon(you, '#3a9de5', 'rgba(58,157,229,0.18)');
+
+  // Labels
+  ctx.fillStyle = '#777';
+  ctx.font = '10px Courier New, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i * step;
+    const lx = cx + Math.cos(a) * (R + 22);
+    const ly = cy + Math.sin(a) * (R + 22);
+    ctx.fillText(labels[i], lx, ly);
+  }
 }
 
 // ============================================================

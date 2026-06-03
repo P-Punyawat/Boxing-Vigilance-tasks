@@ -383,3 +383,38 @@ body {
   animation: flashAnim 0.25s ease-out forwards;
   z-index: 9999;
 }
+
+/* ============================================================
+   Score card extras — radar, pills, flags
+   ============================================================ */
+.radar-section { display: flex; flex-direction: column; align-items: center; margin: 1.6rem auto 0; }
+.radar-legend  { display: flex; gap: 1.4rem; margin-top: 0.5rem; font-size: 0.65rem; letter-spacing: 0.08em; }
+.legend-you    { color: #3a9de5; }
+.legend-ref    { color: #555; }
+.validity-flag {
+  border-left: 3px solid #FFC107;
+  border-radius: 0 4px 4px 0;
+  background: #1e1700;
+  padding: 0.55rem 1rem;
+  margin: 0.6rem 0;
+  font-size: 0.82rem;
+  color: #FFC107;
+  line-height: 1.5;
+}
+.secondary-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  justify-content: center;
+}
+.metric-pill {
+  background: #1e1e1e;
+  border: 1px solid #2e2e2e;
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  color: #666;
+  letter-spacing: 0.03em;
+}
+.metric-pill strong { color: #aaa; }
