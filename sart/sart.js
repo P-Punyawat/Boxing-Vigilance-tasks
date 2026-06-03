@@ -16,7 +16,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   practice: {
     repsPerDigit: 2,              // each digit appears this many times
@@ -315,6 +315,7 @@ function showPracticeFeedback(data) {
 
 function showResults(data) {
   const s = analyzeData(data);
+<<<<<<< Updated upstream
   const commPct = (s.commissionErrors / s.noGoTrials * 100).toFixed(1);
   const omPct = (s.omissionErrors / s.goTrials * 100).toFixed(1);
 
@@ -324,6 +325,31 @@ function showResults(data) {
   const omClass = s.omissionErrors <= 4 ? 'color-good'
     : s.omissionErrors <= 10 ? 'color-warn'
       : 'color-bad';
+=======
+  const commPct = (s.faRate * 100).toFixed(1);
+  const omPct = s.goTrials ? (s.omissionErrors / s.goTrials * 100).toFixed(1) : '0.0';
+  const crPct = s.noGoTrials ? (s.correctRejections / s.noGoTrials * 100).toFixed(1) : '—';
+
+  const commClass = s.commissionErrors <= 2 ? 'color-good' : s.commissionErrors <= 5 ? 'color-warn' : 'color-bad';
+  const omClass = s.omissionErrors <= 4 ? 'color-good' : s.omissionErrors <= 10 ? 'color-warn' : 'color-bad';
+  const dClass = s.dPrime >= 2.5 ? 'color-good' : s.dPrime >= 1.0 ? 'color-warn' : 'color-bad';
+  const cvClass = s.cv !== null && s.cv <= 0.3 ? 'color-good' : s.cv !== null && s.cv <= 0.5 ? 'color-warn' : 'color-bad';
+
+  // Validity flags
+  const flags = [];
+  if (s.meanRT !== null && s.meanRT < 100)
+    flags.push('⚠ Mean RT < 100ms — responses may be anticipatory or accidental.');
+  if (s.faRate > 0.5)
+    flags.push('⚠ Commission rate > 50% — participant may have misunderstood the task (should withhold on 3).');
+  if (s.goTrials && s.omissionErrors / s.goTrials > 0.5)
+    flags.push('⚠ Omission rate > 50% — low engagement or possible technical issue.');
+  if (s.dPrime < 0)
+    flags.push('⚠ d′ < 0 — below-chance discrimination; data likely invalid.');
+  if (s.h1Acc !== null && s.h2Acc !== null && (s.h1Acc - s.h2Acc) > 0.15)
+    flags.push(`⚠ Vigilance decrement: accuracy dropped ${((s.h1Acc - s.h2Acc) * 100).toFixed(0)}% from first to second half.`);
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
+>>>>>>> Stashed changes
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status">
@@ -371,8 +397,28 @@ function showResults(data) {
     </div>
   `);
 
+<<<<<<< Updated upstream
   document.getElementById('btn-download').addEventListener('click', () => {
     exportCSV([...practiceData, ...testData]);
+=======
+  // Radar dimensions (all normalized 0–1)
+  const hitNorm = Math.min(1, s.hitRate);
+  const crNorm = s.noGoTrials ? s.correctRejections / s.noGoTrials : 0;
+  const spdNorm = s.meanRT !== null ? Math.min(1, Math.max(0, (800 - s.meanRT) / 600)) : 0;
+  const conNorm = s.cv !== null ? Math.min(1, Math.max(0, 1 - s.cv)) : 0;
+  const dNorm = Math.min(1, Math.max(0, s.dPrime / 4.0));
+  const vigNorm = (s.h1Acc !== null && s.h2Acc !== null)
+    ? Math.min(1, Math.max(0, 1 - Math.max(0, s.h1Acc - s.h2Acc) * 3))
+    : 0.8;
+
+  const labels = ['Hit Rate', 'Inhibition', 'Speed', 'Consistency', 'd′', 'Vigilance'];
+  const you = [hitNorm, crNorm, spdNorm, conNorm, dNorm, vigNorm];
+  const ref = [0.90, 0.85, 0.70, 0.65, 0.75, 0.80];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
+>>>>>>> Stashed changes
   });
 
   document.getElementById('btn-restart').addEventListener('click', () => {
@@ -490,6 +536,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
 function analyzeData(data) {
   const goTrials = data.filter(t => !t.isNogo);
   const noGoTrials = data.filter(t => t.isNogo);
+<<<<<<< Updated upstream
 
   const hits = data.filter(t => t.outcome === 'hit');
   const omissions = data.filter(t => t.outcome === 'omission');
@@ -497,6 +544,39 @@ function analyzeData(data) {
   const correctRejection = data.filter(t => t.outcome === 'correct_rejection');
 
   const rts = hits.map(t => t.rt).filter(v => v !== null);
+=======
+  const hits = data.filter(t => t.outcome === 'hit');
+  const omissions = data.filter(t => t.outcome === 'omission');
+  const commissions = data.filter(t => t.outcome === 'commission');
+  const correctRej = data.filter(t => t.outcome === 'correct_rejection');
+
+  const rts = hits.map(t => t.rt).filter(v => v !== null);
+  const mRT = mean(rts);
+  const sRT = sd(rts);
+  const cv = (mRT && sRT) ? sRT / mRT : null;
+
+  const hitRate = goTrials.length ? hits.length / goTrials.length : 0;
+  const faRate = noGoTrials.length ? commissions.length / noGoTrials.length : 0;
+  const dPrime = probit(hitRate) - probit(faRate);
+
+  // First-half vs second-half accuracy (vigilance decrement)
+  const mid = Math.floor(data.length / 2);
+  const blockAcc = d => {
+    if (!d.length) return null;
+    return d.filter(t => t.outcome === 'hit' || t.outcome === 'correct_rejection').length / d.length;
+  };
+  const h1Acc = blockAcc(data.slice(0, mid));
+  const h2Acc = blockAcc(data.slice(mid));
+
+  // Post-Error Slowing: mean RT on hit trials immediately after a commission
+  const pesRTs = [], baseRTs = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i].outcome === 'hit' && data[i].rt !== null) {
+      (data[i - 1].outcome === 'commission' ? pesRTs : baseRTs).push(data[i].rt);
+    }
+  }
+  const pes = (pesRTs.length && baseRTs.length) ? mean(pesRTs) - mean(baseRTs) : null;
+>>>>>>> Stashed changes
 
   return {
     total: data.length,

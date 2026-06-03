@@ -9,7 +9,7 @@
 // ============================================================
 
 const CONFIG = {
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   arena: { w: 700, h: 480 },
   circle: { r: 20 },   // slightly smaller to fit 10 circles
@@ -346,7 +346,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const o = circleAt(x, y);
     if (!o) return;
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
-    else                    { selected.add(o.id);    o.selected = true;  }
+    else { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
@@ -609,6 +609,7 @@ function showPracticeFeedback(data) {
   });
 }
 
+<<<<<<< Updated upstream
 function showResults(data) {
   const kValue = computeKValue();
   const nCorrect = data.filter(d => d.correct).length;
@@ -616,6 +617,51 @@ function showResults(data) {
   const modeLabel = testMode === 'adaptive'
     ? `Stopped at ${SC.reversalCount} reversals`
     : `Fixed 40-trial test`;
+=======
+function computeMOTCapacityAdvanced(data) {
+  const test = data.filter(d => d.block === 'test');
+  if (!test.length) return null;
+
+  const nC = test.filter(d => d.correct).length;
+  const acc = nC / test.length;
+  const mid = Math.floor(test.length / 2);
+  const h1Acc = mid > 0 ? test.slice(0, mid).filter(d => d.correct).length / mid : null;
+  const h2Acc = (test.length - mid) > 0 ? test.slice(mid).filter(d => d.correct).length / (test.length - mid) : null;
+
+  const revTargets = SC.reversalTargets;
+  const revMean = revTargets.length ? mean(revTargets) : null;
+  const revSd = sd(revTargets);
+  const revCv = (revMean && revSd) ? revSd / revMean : null;
+
+  return { acc, h1Acc, h2Acc, revMean, revSd, revCv };
+}
+
+function showResults(data) {
+  const kValue = computeKValue();
+  const adv = computeMOTCapacityAdvanced(data) || {};
+  const test = data.filter(d => d.block === 'test');
+  const nCorrect = test.filter(d => d.correct).length;
+  const pct = test.length ? (nCorrect / test.length * 100).toFixed(1) : '—';
+  const modeLabel = testMode === 'adaptive'
+    ? `Adaptive · ${SC.reversalCount} reversals`
+    : `Fixed · ${test.length} trials`;
+
+  const kClass = kValue >= 4 ? 'color-good' : kValue >= 2.5 ? 'color-warn' : 'color-bad';
+  const accClass = adv.acc >= 0.75 ? 'color-good' : adv.acc >= 0.55 ? 'color-warn' : 'color-bad';
+
+  // Validity flags
+  const flags = [];
+  if (adv.acc !== undefined && adv.acc < 0.20)
+    flags.push('⚠ Accuracy < 20% — participant may not have understood the task.');
+  if (kValue >= CONFIG.test.maxTargets)
+    flags.push('⚠ K-value at ceiling — tracking capacity limit not found; consider higher max targets.');
+  if (kValue <= CONFIG.test.minTargets + 0.1)
+    flags.push('⚠ K-value at floor — very poor tracking performance or engagement issue.');
+  if (adv.h1Acc !== null && adv.h2Acc !== null && (adv.h1Acc - adv.h2Acc) > 0.20)
+    flags.push(`⚠ Fatigue effect: accuracy dropped ${((adv.h1Acc - adv.h2Acc) * 100).toFixed(0)}% in the second half.`);
+
+  const flagHtml = flags.map(f => `<div class="validity-flag">${f}</div>`).join('');
+>>>>>>> Stashed changes
 
   const submitRow = CONFIG.sheetUrl
     ? `<div id="submit-status" class="submit-status"><span class="status-pending">Submitting&#8230;</span></div>`
@@ -655,6 +701,29 @@ function showResults(data) {
     </div>
   `);
 
+<<<<<<< Updated upstream
+=======
+  // Radar dimensions
+  const kRange = CONFIG.test.maxTargets - CONFIG.test.minTargets;
+  const kNorm = kRange > 0 ? Math.min(1, Math.max(0, (kValue - CONFIG.test.minTargets) / kRange)) : 0.5;
+  const accNorm = adv.acc ?? 0;
+  const h1Norm = adv.h1Acc ?? 0;
+  const h2Norm = adv.h2Acc ?? 0;
+  const stabilNorm = adv.revCv !== null ? Math.max(0, 1 - adv.revCv) : 0.5;
+  const effNorm = testMode === 'adaptive'
+    ? Math.max(0, 1 - (test.length / CONFIG.staircase.maxTrials))
+    : accNorm;
+
+  const labels = ['K-Value', 'Accuracy', 'Block 1', 'Block 2', 'Stability', 'Efficiency'];
+  const you = [kNorm, accNorm, h1Norm, h2Norm, stabilNorm, effNorm];
+  const ref = [0.40, 0.72, 0.72, 0.68, 0.60, 0.55];
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) drawRadar(canvas, labels, you, ref);
+  });
+
+>>>>>>> Stashed changes
   document.getElementById('btn-dl').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => { practiceData = []; testData = []; showWelcome(); });
 
