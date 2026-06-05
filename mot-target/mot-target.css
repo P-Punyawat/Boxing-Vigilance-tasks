@@ -317,3 +317,17 @@ body {
   padding: 0.55rem 2.4rem;
   font-size: 0.85rem;
 }
+
+.save-now-btn {
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+}
+.save-now-btn:hover:not(:disabled) { border-color: #555; color: #888; }
+.save-now-btn:disabled { opacity: 0.6; cursor: default; }

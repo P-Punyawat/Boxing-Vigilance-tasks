@@ -9,7 +9,7 @@
 // ============================================================
 
 const CONFIG = {
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   arena: { w: 700, h: 480 },
   circle: { r: 22 },
@@ -52,9 +52,11 @@ const CONFIG = {
 // ============================================================
 
 let participantId = '';
-let testMode = 'fixed';   // 'fixed' | 'adaptive'
-let practiceData = [];
-let testData = [];
+let sessionSeed   = null;
+let sessionId     = '';
+let testMode      = 'fixed';   // 'fixed' | 'adaptive'
+let practiceData  = [];
+let testData      = [];
 
 let SC = {          // staircase state
   speed: CONFIG.speed.start,
@@ -75,13 +77,31 @@ function render(html) { app.innerHTML = html; }
 //  Utilities
 // ============================================================
 
-function rand(a, b) { return Math.random() * (b - a) + a; }
+// Mulberry32 seeded PRNG
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
+let rng = Math.random;
+
+function rand(a, b) { return rng() * (b - a) + a; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -236,6 +256,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
         ${trialNum}&thinsp;/&thinsp;${totalTrials}
         ${isPractice ? '<span class="practice-tag">practice</span>' : ''}
       </div>
+      <button id="btn-save-now" class="save-now-btn">Save data</button>
     </div>
     <div class="mot-arena">
       <canvas id="arena" width="${CONFIG.arena.w}" height="${CONFIG.arena.h}"></canvas>
@@ -246,6 +267,43 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
       <button class="btn confirm-btn" id="btn-confirm" disabled style="display:none">Confirm</button>
     </div>
   `;
+
+  document.getElementById('btn-save-now').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-save-now');
+    if (!btn || btn.disabled) return;
+
+    const allData = [...practiceData, ...testData];
+    if (!allData.length) {
+      btn.textContent = 'No data yet';
+      setTimeout(() => { const b = document.getElementById('btn-save-now'); if (b) b.textContent = 'Save data'; }, 2000);
+      return;
+    }
+
+    btn.textContent = `Saving ${allData.length} rows…`;
+    btn.disabled = true;
+
+    try {
+      const rows = allData.map(d => [
+        participantId, d.block, d.trialNum, d.numTargets, Math.round(d.speed),
+        d.correct ? 1 : 0, d.reversalCount ?? '',
+        (d.selectedIds || []).join(';'), (d.targetIds || []).join(';'),
+      ]);
+      const body = new FormData();
+      body.append('sheet', 'MOT Speed Data');
+      body.append('payload', JSON.stringify(rows));
+      const res = await fetch(CONFIG.sheetUrl, { method: 'POST', body });
+      const json = await res.json();
+      btn.textContent = json.status === 'ok' ? `Saved ${json.n} ✓` : `Error: ${json.message}`;
+    } catch (err) {
+      btn.textContent = 'Failed — see console';
+      console.error('[MOT Speed] save failed:', err);
+    }
+
+    setTimeout(() => {
+      const b = document.getElementById('btn-save-now');
+      if (b) { b.textContent = 'Save data'; b.disabled = false; }
+    }, 3000);
+  });
 
   const canvas = document.getElementById('arena');
   const ctx = canvas.getContext('2d');
@@ -449,6 +507,7 @@ function runPractice(onComplete) {
         block: 'practice', trialNum: idx + 1,
         numTargets: seq[idx], speed: CONFIG.practice.speed, ...result
       });
+      submitToSheet(data[data.length - 1]);
       idx++;
       next();
     });
@@ -480,6 +539,7 @@ function runTest(onComplete) {
         block: 'test', trialNum, numTargets: CONFIG.test.targets,
         speed, reversalCount: SC.reversalCount, ...result,
       });
+      submitToSheet(testData[testData.length - 1]);
       updateStaircase(result.correct);
       next();
     });
@@ -539,6 +599,12 @@ function showWelcome() {
   document.getElementById('btn-start').addEventListener('click', () => {
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
     testMode = document.querySelector('input[name="ver"]:checked').value;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    sessionId = `${datetimePrefix}_${participantId}`;
+    sessionSeed = seedFromString(sessionId);
+    rng = mulberry32(sessionSeed);
     practiceData = [];
     testData = [];
     runPractice(data => { practiceData = data; showPracticeFeedback(data); });
@@ -638,12 +704,6 @@ function showResults(data) {
   document.getElementById('btn-dl').addEventListener('click', () => exportCSV([...practiceData, ...testData]));
   document.getElementById('btn-restart').addEventListener('click', () => { practiceData = []; testData = []; showWelcome(); });
 
-  if (CONFIG.sheetUrl) {
-    submitToSheet([...practiceData, ...testData]).then(() => {
-      const el = document.getElementById('submit-status');
-      if (el) el.innerHTML = '<span class="status-ok">Data sent &#10003;</span>';
-    });
-  }
 }
 
 // ============================================================
@@ -651,10 +711,10 @@ function showResults(data) {
 // ============================================================
 
 function exportCSV(data) {
-  const headers = ['participant_id', 'block', 'trial_num', 'num_targets', 'speed_px_s',
+  const headers = ['participant_id', 'seed', 'block', 'trial_num', 'num_targets', 'speed_px_s',
     'correct', 'reversal_count', 'selected_ids', 'target_ids'];
   const rows = data.map(d => [
-    participantId, d.block, d.trialNum, d.numTargets, Math.round(d.speed),
+    sessionId, sessionSeed, d.block, d.trialNum, d.numTargets, Math.round(d.speed),
     d.correct ? 1 : 0, d.reversalCount ?? '',
     '"' + (d.selectedIds || []).join(';') + '"',
     '"' + (d.targetIds || []).join(';') + '"',
@@ -664,24 +724,22 @@ function exportCSV(data) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `MOT_Speed_${participantId}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+  a.download = `MOT_Speed_${sessionId}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-async function submitToSheet(data) {
+function submitToSheet(d) {
   if (!CONFIG.sheetUrl) return;
-  const rows = data.map(d => [
-    participantId, d.block, d.trialNum, d.numTargets, Math.round(d.speed),
+  const row = [
+    sessionId, sessionSeed, d.block, d.trialNum, d.numTargets, Math.round(d.speed),
     d.correct ? 1 : 0, d.reversalCount ?? '',
     (d.selectedIds || []).join(';'), (d.targetIds || []).join(';'),
-  ]);
-  try {
-    const body = new FormData();
-    body.append('sheet', 'MOT Speed Data');
-    body.append('payload', JSON.stringify(rows));
-    await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-  } catch (_) { }
+  ];
+  const body = new FormData();
+  body.append('sheet', 'MOT Speed Data');
+  body.append('payload', JSON.stringify([row]));
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
 }
 
 // ============================================================

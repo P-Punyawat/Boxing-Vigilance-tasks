@@ -18,21 +18,21 @@
 
 var HEADERS = {
   'SART Data': [
-    'timestamp', 'participant_id', 'block', 'trial_num',
+    'timestamp', 'participant_id', 'seed', 'block', 'trial_num',
     'digit', 'is_nogo', 'font_size_pt', 'isi_ms',
     'responded', 'rt_ms', 'outcome'
   ],
   'BART Data': [
-    'timestamp', 'participant_id', 'block', 'balloon_num',
+    'timestamp', 'participant_id', 'seed', 'block', 'balloon_num',
     'pop_point', 'pumps', 'popped', 'earnings', 'permanent_bank_after'
   ],
   'MOT Speed Data': [
-    'timestamp', 'participant_id', 'block', 'trial_num',
+    'timestamp', 'participant_id', 'seed', 'block', 'trial_num',
     'num_targets', 'speed_px_s', 'correct', 'reversal_count',
     'selected_ids', 'target_ids'
   ],
   'MOT Capacity Data': [
-    'timestamp', 'participant_id', 'block', 'trial_num',
+    'timestamp', 'participant_id', 'seed', 'block', 'trial_num',
     'num_targets', 'speed_px_s', 'correct', 'reversal_count',
     'selected_ids', 'target_ids'
   ]
@@ -47,19 +47,26 @@ function doPost(e) {
       throw new Error('Unknown sheet: ' + sheetName);
     }
 
-    var ss        = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet     = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
-    var headers   = HEADERS[sheetName];
+    var lock = LockService.getScriptLock();
+    lock.waitLock(10000);
 
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(headers);
-      sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
-      sheet.setFrozenRows(1);
-    }
+    try {
+      var ss      = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet   = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+      var headers = HEADERS[sheetName];
 
-    var timestamp = new Date().toISOString();
-    for (var i = 0; i < rows.length; i++) {
-      sheet.appendRow([timestamp].concat(rows[i]));
+      if (sheet.getLastRow() === 0) {
+        sheet.appendRow(headers);
+        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+        sheet.setFrozenRows(1);
+      }
+
+      var timestamp = new Date().toISOString();
+      for (var i = 0; i < rows.length; i++) {
+        sheet.appendRow([timestamp].concat(rows[i]));
+      }
+    } finally {
+      lock.releaseLock();
     }
 
     return ContentService
@@ -76,20 +83,20 @@ function doPost(e) {
 // Run inside the Apps Script editor to verify all tabs get created correctly.
 function testSheet() {
   var sartRows = [
-    ['P_TEST', 'test', 1, 5, 0, 72,  1000, 1, 312, 'hit'],
-    ['P_TEST', 'test', 2, 3, 1, 94,  1500, 0, '',  'correct_rejection']
+    ['20260101T120000_P_TEST', 123456789, 'test', 1, 5, 0, 72,  1000, 1, 312, 'hit'],
+    ['20260101T120000_P_TEST', 123456789, 'test', 2, 3, 1, 94,  1500, 0, '',  'correct_rejection']
   ];
   var bartRows = [
-    ['P_TEST', 'test', 1, 42, 12, 0, '0.60', '0.60'],
-    ['P_TEST', 'test', 2, 10, 10, 1, '0.00', '0.60']
+    ['20260101T120000_P_TEST', 123456789, 'test', 1, 42, 12, 0, '0.60', '0.60'],
+    ['20260101T120000_P_TEST', 123456789, 'test', 2, 10, 10, 1, '0.00', '0.60']
   ];
   var motSpeedRows = [
-    ['P_TEST', 'practice', 1, 4, 200, 1, '', '2;3', '0;1;2;3'],
-    ['P_TEST', 'test',     2, 4, 300, 0,  0, '1;2', '0;1;2;3']
+    ['20260101T120000_P_TEST', 123456789, 'practice', 1, 4, 200, 1, '', '2;3', '0;1;2;3'],
+    ['20260101T120000_P_TEST', 123456789, 'test',     2, 4, 300, 0,  0, '1;2', '0;1;2;3']
   ];
   var motCapRows = [
-    ['P_TEST', 'practice', 1, 3, 200, 1, '', '0;4;7', '0;4;7'],
-    ['P_TEST', 'test',     2, 4, 280, 1,  0, '1;3;5;8', '1;3;5;8']
+    ['20260101T120000_P_TEST', 123456789, 'practice', 1, 3, 200, 1, '', '0;4;7', '0;4;7'],
+    ['20260101T120000_P_TEST', 123456789, 'test',     2, 4, 280, 1,  0, '1;3;5;8', '1;3;5;8']
   ];
 
   var e1 = { parameter: { sheet: 'SART Data',         payload: JSON.stringify(sartRows)     } };

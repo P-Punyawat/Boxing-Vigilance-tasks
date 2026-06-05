@@ -14,7 +14,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   practice: { count: 2 },
   test: { count: 30 },
@@ -46,16 +46,36 @@ const COLORS = [
 // ============================================================
 
 let participantId = '';
-let practiceData = [];
-let testData = [];
-let audioCtx = null;
+let sessionSeed   = null;
+let sessionId     = '';
+let practiceData  = [];
+let testData      = [];
+let audioCtx      = null;
 
 // ============================================================
 //  Utilities
 // ============================================================
 
+// Mulberry32 seeded PRNG
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
+let rng = Math.random;
+
 function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(rng() * (max - min + 1)) + min;
 }
 
 function fmt(n) {
@@ -68,7 +88,7 @@ function mean(arr) {
 }
 
 function randomColor() {
-  return COLORS[Math.floor(Math.random() * COLORS.length)];
+  return COLORS[Math.floor(rng() * COLORS.length)];
 }
 
 function escapeHtml(str) {
@@ -240,6 +260,12 @@ function showWelcome() {
 
   document.getElementById('btn-start').addEventListener('click', () => {
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    sessionId = `${datetimePrefix}_${participantId}`;
+    sessionSeed = seedFromString(sessionId);
+    rng = mulberry32(sessionSeed);
     runBlock(CONFIG.practice.count, true, data => {
       practiceData = data;
       showPracticeFeedback(data);
@@ -361,12 +387,6 @@ function showResults(data) {
     showWelcome();
   });
 
-  if (CONFIG.sheetUrl) {
-    submitToSheet([...practiceData, ...testData]).then(() => {
-      const el = document.getElementById('submit-status');
-      if (el) el.innerHTML = '<span class="status-ok">Data sent to sheet &#10003;</span>';
-    });
-  }
 }
 
 // ============================================================
@@ -404,7 +424,7 @@ function runBlock(count, isPractice, onComplete) {
         earnings,
         permanentBank,
       });
-
+      submitToSheet(blockData[blockData.length - 1]);
       idx++;
       next();
     });
@@ -584,27 +604,17 @@ function flashScreen() {
 //  Google Sheets submission
 // ============================================================
 
-async function submitToSheet(allData) {
-  if (!CONFIG.sheetUrl) return false;
-
-  const rows = allData.map(d => [
-    participantId,
-    d.block,
-    d.balloonNum,
-    d.popPoint,
-    d.pumps,
-    d.popped ? 1 : 0,
-    d.earnings.toFixed(2),
-    d.permanentBank.toFixed(2),
-  ]);
-
-  try {
-    const body = new FormData();
-    body.append('sheet', 'BART Data');
-    body.append('payload', JSON.stringify(rows));
-    await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-  } catch (_) { }
-  return true;
+function submitToSheet(d) {
+  if (!CONFIG.sheetUrl) return;
+  const row = [
+    sessionId, sessionSeed,
+    d.block, d.balloonNum, d.popPoint, d.pumps,
+    d.popped ? 1 : 0, d.earnings.toFixed(2), d.permanentBank.toFixed(2),
+  ];
+  const body = new FormData();
+  body.append('sheet', 'BART Data');
+  body.append('payload', JSON.stringify([row]));
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
 }
 
 // ============================================================
@@ -613,12 +623,12 @@ async function submitToSheet(allData) {
 
 function exportCSV(data) {
   const headers = [
-    'participant_id', 'block', 'balloon_num', 'pop_point',
+    'participant_id', 'seed', 'block', 'balloon_num', 'pop_point',
     'pumps', 'popped', 'earnings', 'permanent_bank_after',
   ];
 
   const rows = data.map(d => [
-    participantId,
+    sessionId, sessionSeed,
     d.block,
     d.balloonNum,
     d.popPoint,
@@ -633,7 +643,7 @@ function exportCSV(data) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `BART_${participantId}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+  a.download = `BART_${sessionId}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

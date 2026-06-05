@@ -16,7 +16,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbykUJMtozfiF57pzhtjo2ex5OEsifqpXrjNRT1G6AmWX0ls3Ekv6p3LKBXlwnUPVUAvsg/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   practice: {
     repsPerDigit: 2,              // each digit appears this many times
@@ -37,24 +37,44 @@ const CONFIG = {
 // ============================================================
 
 let participantId = '';
-let practiceData = [];
-let testData = [];
+let sessionSeed   = null;
+let sessionId     = '';
+let practiceData  = [];
+let testData      = [];
 
 // ============================================================
 //  Utilities
 // ============================================================
 
+// Mulberry32 seeded PRNG — returns a function that produces [0,1) floats
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
+let rng = Math.random;
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
 function randomFrom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(rng() * arr.length)];
 }
 
 function mean(arr) {
@@ -188,6 +208,12 @@ function showWelcome() {
   document.getElementById('btn-start').addEventListener('click', () => {
     const raw = document.getElementById('pid').value.trim();
     participantId = raw || 'anonymous';
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    sessionId = `${datetimePrefix}_${participantId}`;
+    sessionSeed = seedFromString(sessionId);
+    rng = mulberry32(sessionSeed);
     showCountdown('Practice', () => {
       runBlock(generatePracticeTrials(), true, data => {
         practiceData = data;
@@ -381,13 +407,6 @@ function showResults(data) {
     showWelcome();
   });
 
-  if (CONFIG.sheetUrl) {
-    submitToSheet([...practiceData, ...testData]).then(ok => {
-      const el = document.getElementById('submit-status');
-      if (!el) return;
-      el.innerHTML = '<span class="status-ok">Data sent to sheet ✓</span>';
-    });
-  }
 }
 
 // ============================================================
@@ -417,6 +436,7 @@ function runBlock(trials, isPractice, onComplete) {
         trialNum: idx + 1,
         ...result,
       });
+      submitToSheet(blockData[blockData.length - 1]);
       idx++;
       next();
     });
@@ -518,13 +538,13 @@ function analyzeData(data) {
 
 function exportCSV(data) {
   const headers = [
-    'participant_id', 'block', 'trial_num',
+    'participant_id', 'seed', 'block', 'trial_num',
     'digit', 'is_nogo', 'font_size_pt', 'isi_ms',
     'responded', 'rt_ms', 'outcome',
   ];
 
   const rows = data.map(t => [
-    participantId,
+    sessionId, sessionSeed,
     t.block,
     t.trialNum,
     t.digit,
@@ -540,9 +560,8 @@ function exportCSV(data) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   a.href = url;
-  a.download = `SART_${participantId}_${ts}.csv`;
+  a.download = `SART_${sessionId}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -553,29 +572,18 @@ function exportCSV(data) {
 //  Google Sheets submission
 // ============================================================
 
-async function submitToSheet(allData) {
-  if (!CONFIG.sheetUrl) return false;
-
-  const rows = allData.map(t => [
-    participantId,
-    t.block,
-    t.trialNum,
-    t.digit,
-    t.isNogo ? 1 : 0,
-    t.fontSize,
-    t.isi,
-    t.responded ? 1 : 0,
-    t.rt !== null ? t.rt : '',
-    t.outcome,
-  ]);
-
-  try {
-    const body = new FormData();
-    body.append('sheet', 'SART Data');
-    body.append('payload', JSON.stringify(rows));
-    await fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body });
-  } catch (_) { }
-  return true;
+function submitToSheet(t) {
+  if (!CONFIG.sheetUrl) return;
+  const row = [
+    sessionId, sessionSeed,
+    t.block, t.trialNum, t.digit, t.isNogo ? 1 : 0,
+    t.fontSize, t.isi, t.responded ? 1 : 0,
+    t.rt !== null ? t.rt : '', t.outcome,
+  ];
+  const body = new FormData();
+  body.append('sheet', 'SART Data');
+  body.append('payload', JSON.stringify([row]));
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
 }
 
 // ============================================================
