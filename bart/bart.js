@@ -9,7 +9,7 @@
 // ============================================================
 
 const CONFIG = {
-  reward: 0.05,   // $ per pump
+  reward: 0.50,   // $ per pump
   maxPumps: 128,    // pre-determined pop range is [1, maxPumps]
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
@@ -46,11 +46,11 @@ const COLORS = [
 // ============================================================
 
 let participantId = '';
-let sessionSeed   = null;
-let sessionId     = '';
-let practiceData  = [];
-let testData      = [];
-let audioCtx      = null;
+let sessionSeed = null;
+let sessionId = '';
+let practiceData = [];
+let testData = [];
+let audioCtx = null;
 
 // ============================================================
 //  Utilities
@@ -58,7 +58,7 @@ let audioCtx      = null;
 
 // Mulberry32 seeded PRNG
 function mulberry32(seed) {
-  return function() {
+  return function () {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
     let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
@@ -262,7 +262,7 @@ function showWelcome() {
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     sessionId = `${datetimePrefix}_${participantId}`;
     sessionSeed = seedFromString(sessionId);
     rng = mulberry32(sessionSeed);
@@ -463,7 +463,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
     const tempEl = document.getElementById('b-temp');
     const colBtn = document.getElementById('btn-collect');
     if (scaleEl) {
-      const s = 0.3 + (pumps / CONFIG.maxPumps) * 0.85;
+      const s = 0.3 + (pumps / CONFIG.maxPumps) * 2.2;
       scaleEl.style.transform = `scale(${s})`;
     }
     if (tempEl) tempEl.textContent = fmt(tempEarnings());
@@ -614,7 +614,7 @@ function submitToSheet(d) {
   const body = new FormData();
   body.append('sheet', 'BART Data');
   body.append('payload', JSON.stringify([row]));
-  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => { });
 }
 
 // ============================================================

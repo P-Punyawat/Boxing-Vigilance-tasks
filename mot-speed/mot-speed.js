@@ -52,11 +52,11 @@ const CONFIG = {
 // ============================================================
 
 let participantId = '';
-let sessionSeed   = null;
-let sessionId     = '';
-let testMode      = 'fixed';   // 'fixed' | 'adaptive'
-let practiceData  = [];
-let testData      = [];
+let sessionSeed = null;
+let sessionId = '';
+let testMode = 'fixed';   // 'fixed' | 'adaptive'
+let practiceData = [];
+let testData = [];
 
 let SC = {          // staircase state
   speed: CONFIG.speed.start,
@@ -79,7 +79,7 @@ function render(html) { app.innerHTML = html; }
 
 // Mulberry32 seeded PRNG
 function mulberry32(seed) {
-  return function() {
+  return function () {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
     let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
@@ -399,7 +399,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const o = circleAt(x, y);
     if (!o) return;
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
-    else                    { selected.add(o.id);    o.selected = true;  }
+    else { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
@@ -601,7 +601,7 @@ function showWelcome() {
     testMode = document.querySelector('input[name="ver"]:checked').value;
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     sessionId = `${datetimePrefix}_${participantId}`;
     sessionSeed = seedFromString(sessionId);
     rng = mulberry32(sessionSeed);
@@ -739,7 +739,7 @@ function submitToSheet(d) {
   const body = new FormData();
   body.append('sheet', 'MOT Speed Data');
   body.append('payload', JSON.stringify([row]));
-  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => { });
 }
 
 // ============================================================

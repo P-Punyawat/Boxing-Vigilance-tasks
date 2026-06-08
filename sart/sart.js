@@ -37,10 +37,10 @@ const CONFIG = {
 // ============================================================
 
 let participantId = '';
-let sessionSeed   = null;
-let sessionId     = '';
-let practiceData  = [];
-let testData      = [];
+let sessionSeed = null;
+let sessionId = '';
+let practiceData = [];
+let testData = [];
 
 // ============================================================
 //  Utilities
@@ -48,7 +48,7 @@ let testData      = [];
 
 // Mulberry32 seeded PRNG — returns a function that produces [0,1) floats
 function mulberry32(seed) {
-  return function() {
+  return function () {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
     let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
@@ -210,7 +210,7 @@ function showWelcome() {
     participantId = raw || 'anonymous';
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     sessionId = `${datetimePrefix}_${participantId}`;
     sessionSeed = seedFromString(sessionId);
     rng = mulberry32(sessionSeed);
@@ -583,7 +583,7 @@ function submitToSheet(t) {
   const body = new FormData();
   body.append('sheet', 'SART Data');
   body.append('payload', JSON.stringify([row]));
-  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
+  fetch(CONFIG.sheetUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => { });
 }
 
 // ============================================================
