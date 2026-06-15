@@ -467,7 +467,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
   const trialStart = performance.now();
 
   const onKey = e => {
-    if ((e.code === 'Space' || e.key === ' ') && !responded) {
+    if ((e.code === 'Space' || e.key === ' ') && !responded && !e.repeat) {
       responded = true;
       rt = performance.now() - trialStart;
     }

@@ -524,8 +524,8 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
   // ---- Keyboard shortcuts ----
 
   function keyHandler(e) {
-    if (e.code === 'Space') { e.preventDefault(); doPump(); }
-    if (e.code === 'Enter') { e.preventDefault(); doCollect(); }
+    if (e.code === 'Space' && !e.repeat) { e.preventDefault(); doPump(); }
+    if (e.code === 'Enter' && !e.repeat) { e.preventDefault(); doCollect(); }
   }
 
   // ---- Render overlay ----
