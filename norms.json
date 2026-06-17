@@ -1,0 +1,14 @@
+{
+  "_note": "Populate means and SDs from normative sample CSV analysis. Set values to null to show raw estimates instead of percentiles.",
+  "sart": {
+    "commission_rate": { "mean": null, "sd": null, "lower_is_better": true },
+    "rt_cv":           { "mean": null, "sd": null, "lower_is_better": true }
+  },
+  "bart": {
+    "adj_avg_pumps":   { "mean": null, "sd": null, "lower_is_better": false }
+  },
+  "mot": {
+    "k_value":         { "mean": null, "sd": null, "lower_is_better": false },
+    "accuracy":        { "mean": null, "sd": null, "lower_is_better": false }
+  }
+}

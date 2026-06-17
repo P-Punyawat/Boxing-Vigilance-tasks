@@ -779,6 +779,14 @@ function showResults(data) {
   const kValue = computeKValue();
   const nCorrect = data.filter(d => d.correct).length;
   const pct = (nCorrect / data.length * 100).toFixed(1);
+
+  try {
+    localStorage.setItem(`cri_mot_${participantId}`, JSON.stringify({
+      kValue,
+      accuracy: nCorrect / data.length,
+      completedAt: Date.now(),
+    }));
+  } catch (_) {}
   const modeLabel = testMode === 'adaptive'
     ? `Stopped at ${SC.reversalCount} reversals`
     : `Fixed 40-trial test`;
@@ -818,6 +826,12 @@ function showResults(data) {
         <button class="btn btn-outline" id="btn-restart">Restart</button>
         <a class="btn btn-outline" href="../">Task Selection</a>
       </div>
+      <p style="text-align:center;margin-top:1.2rem">
+        <a href="../scorecard/?pid=${escapeHtml(participantId)}"
+           style="color:#3a7bd5;font-size:0.8rem;text-decoration:none;letter-spacing:0.06em">
+          View Performance Report →
+        </a>
+      </p>
     </div>
   `);
 

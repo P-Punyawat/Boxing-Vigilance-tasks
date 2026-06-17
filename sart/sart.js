@@ -401,6 +401,14 @@ function showResults(data) {
   const commPct = (s.commissionErrors / s.noGoTrials * 100).toFixed(1);
   const omPct = (s.omissionErrors / s.goTrials * 100).toFixed(1);
 
+  try {
+    localStorage.setItem(`cri_sart_${participantId}`, JSON.stringify({
+      commissionRate: s.noGoTrials ? s.commissionErrors / s.noGoTrials : 0,
+      rtCV: s.sdRT !== null && s.meanRT ? s.sdRT / s.meanRT : null,
+      completedAt: Date.now(),
+    }));
+  } catch (_) {}
+
   const commClass = s.commissionErrors <= 2 ? 'color-good'
     : s.commissionErrors <= 5 ? 'color-warn'
       : 'color-bad';
@@ -451,6 +459,12 @@ function showResults(data) {
         <button class="btn btn-outline" id="btn-restart">Restart</button>
         <a class="btn btn-outline" href="../">Task Selection</a>
       </div>
+      <p style="text-align:center;margin-top:1.2rem">
+        <a href="../scorecard/?pid=${escapeHtml(participantId)}"
+           style="color:#3a7bd5;font-size:0.8rem;text-decoration:none;letter-spacing:0.06em">
+          View Performance Report →
+        </a>
+      </p>
     </div>
   `);
 

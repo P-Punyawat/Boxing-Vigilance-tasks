@@ -358,6 +358,13 @@ function showResults(data) {
   const adjAvg = mean(nonPopped.map(d => d.pumps));
   const totalEarned = data.reduce((s, d) => s + d.earnings, 0);
 
+  try {
+    localStorage.setItem(`cri_bart_${participantId}`, JSON.stringify({
+      adjAvgPumps: adjAvg !== null ? adjAvg : 0,
+      completedAt: Date.now(),
+    }));
+  } catch (_) {}
+
   const popClass = popped.length <= 5 ? 'color-good'
     : popped.length <= 12 ? 'color-warn'
       : 'color-bad';
@@ -399,6 +406,12 @@ function showResults(data) {
         <button class="btn btn-outline" id="btn-restart">Restart</button>
         <a class="btn btn-outline" href="../">Task Selection</a>
       </div>
+      <p style="text-align:center;margin-top:1.2rem">
+        <a href="../scorecard/?pid=${escapeHtml(participantId)}"
+           style="color:#3a7bd5;font-size:0.8rem;text-decoration:none;letter-spacing:0.06em">
+          View Performance Report →
+        </a>
+      </p>
     </div>
   `);
 
