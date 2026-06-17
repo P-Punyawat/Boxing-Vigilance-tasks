@@ -500,7 +500,18 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
       sendTrigger(trial.isNogo ? TRIG.SART_COMMISSION : TRIG.SART_HIT);
     }
   };
+
+  const onTouch = e => {
+    e.preventDefault();
+    if (!responded) {
+      responded = true;
+      rt = performance.now() - trialStart;
+      sendTrigger(trial.isNogo ? TRIG.SART_COMMISSION : TRIG.SART_HIT);
+    }
+  };
+
   document.addEventListener('keydown', onKey);
+  container.addEventListener('touchstart', onTouch, { passive: false });
 
   // --- After digit duration → show mask ---
   const digitTimer = setTimeout(() => {
@@ -514,6 +525,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
     // --- After ISI → end trial ---
     const maskTimer = setTimeout(() => {
       document.removeEventListener('keydown', onKey);
+      container.removeEventListener('touchstart', onTouch);
 
       let outcome;
       if (trial.isNogo) {

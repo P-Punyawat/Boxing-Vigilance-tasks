@@ -227,6 +227,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.8rem 1.2rem 1rem;
+  touch-action: none;
 }
 
 .mot-top {
@@ -278,6 +279,7 @@ body {
   aspect-ratio: 700 / 480;
   border: 1px solid #2a2a2a;
   border-radius: 4px;
+  touch-action: none;
 }
 
 .mot-bottom {
@@ -314,8 +316,9 @@ body {
 
 .confirm-btn {
   margin-top: 0.4rem;
-  padding: 0.55rem 2.4rem;
+  padding: 0.75rem 2.4rem;
   font-size: 0.85rem;
+  touch-action: manipulation;
 }
 
 .save-now-btn {

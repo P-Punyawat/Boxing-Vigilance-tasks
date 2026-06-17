@@ -369,6 +369,8 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     cancelAnimationFrame(animId);
     canvas.removeEventListener('mousemove', onMouseMove);
     canvas.removeEventListener('click', onCanvasClick);
+    canvas.removeEventListener('touchmove', onTouchMove);
+    canvas.removeEventListener('touchend', onTouchEnd);
     confirmBtn.removeEventListener('click', finish);
 
     const selectedIds = [...selected];
@@ -433,8 +435,33 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     confirmBtn.disabled = selected.size !== numTargets;
   }
 
+  function onTouchMove(e) {
+    if (phase !== 'response') return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const { x, y } = canvasXY(touch);
+    const o = circleAt(x, y);
+    hoveredId = o ? o.id : -1;
+  }
+
+  function onTouchEnd(e) {
+    if (phase !== 'response') return;
+    e.preventDefault();
+    if (e.changedTouches.length !== 1) return;
+    const touch = e.changedTouches[0];
+    const { x, y } = canvasXY(touch);
+    const o = circleAt(x, y);
+    if (!o) return;
+    if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
+    else { selected.add(o.id); o.selected = true; }
+    selEl.textContent = `${selected.size} / ${numTargets} selected`;
+    confirmBtn.disabled = selected.size !== numTargets;
+  }
+
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: false });
   confirmBtn.addEventListener('click', finish);
 
   let lastTs = null;
