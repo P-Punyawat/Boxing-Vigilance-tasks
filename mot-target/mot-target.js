@@ -8,6 +8,8 @@
 //  Configuration
 // ============================================================
 
+const IS_EEG = !!window.eeg;
+
 const CONFIG = {
   sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
@@ -54,7 +56,7 @@ const CONFIG = {
 let participantId = '';
 let sessionSeed = null;
 let sessionId = '';
-let testMode = 'fixed';   // 'fixed' | 'adaptive'
+let testMode = IS_EEG ? 'fixed' : 'adaptive';   // EEG: full 40 trials; Browser: adaptive short
 let practiceData = [];
 let testData = [];
 
@@ -690,6 +692,7 @@ function showWelcome() {
         <li>Speed stays fixed throughout; only the target count changes.</li>
       </ul>
 
+      ${IS_EEG ? `
       <h2>Test version</h2>
       <div class="version-choice">
         <label class="radio-label">
@@ -700,7 +703,7 @@ function showWelcome() {
           <input type="radio" name="ver" value="adaptive">
           Short — stops after 8 reversals or 3 floor fails (~20 trials; K-value = median of last 4 reversal counts)
         </label>
-      </div>
+      </div>` : ''}
 
       <h2>Practice</h2>
       <p>8 practice trials (1 → 4 targets, 8 circles) run first at a slower speed so you can learn the task.</p>
@@ -718,7 +721,7 @@ function showWelcome() {
 
   document.getElementById('btn-start').addEventListener('click', () => {
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
-    testMode = document.querySelector('input[name="ver"]:checked').value;
+    if (IS_EEG) testMode = document.querySelector('input[name="ver"]:checked').value;
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const datetimePrefix = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
