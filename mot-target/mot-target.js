@@ -124,6 +124,29 @@ function escapeHtml(s) {
 }
 
 // ============================================================
+//  EEG guard functions — no-ops in browser, active in Electron
+// ============================================================
+
+function sendTrigger(code) {
+  if (window.eeg) window.eeg.sendTrigger(code);
+}
+
+function submitData(d) {
+  const headers = ['participant_id', 'seed', 'block', 'trial_num', 'num_targets',
+    'speed_px_s', 'correct', 'reversal_count', 'selected_ids', 'target_ids'];
+  const values = [
+    sessionId, sessionSeed, d.block, d.trialNum, d.numTargets,
+    Math.round(d.speed), d.correct ? 1 : 0, d.reversalCount ?? '',
+    (d.selectedIds || []).join(';'), (d.targetIds || []).join(';'),
+  ];
+  if (window.eeg) {
+    window.eeg.saveRow('MOT_Capacity', sessionId, headers, values);
+  } else {
+    submitToSheet(d);
+  }
+}
+
+// ============================================================
 //  Physics helpers
 // ============================================================
 
@@ -358,6 +381,9 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const correct = selectedIds.length === numTargets &&
       selectedIds.every(id => targetIds.includes(id));
 
+    sendTrigger(TRIG.MOT_CONFIRM);
+    sendTrigger(correct ? TRIG.MOT_CORRECT : TRIG.MOT_INCORRECT);
+
     objs.forEach(o => { o.selected = selected.has(o.id); });
     phase = 'feedback';
     phaseEl.textContent = PHASE_LABELS.feedback;
@@ -372,7 +398,10 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     }, CONFIG.timing.feedback + CONFIG.timing.iti);
   }
 
+  const PHASE_TRIGS = { cue: TRIG.MOT_CUE, track: TRIG.MOT_TRACK, response: TRIG.MOT_RESPONSE };
+
   function setPhase(p) {
+    sendTrigger(PHASE_TRIGS[p]);
     phase = p;
     phaseStart = performance.now();
     phaseEl.textContent = PHASE_LABELS[p];
@@ -439,6 +468,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     animId = requestAnimationFrame(loop);
   }
 
+  sendTrigger(TRIG.MOT_INIT);
   animId = requestAnimationFrame(loop);
 }
 
@@ -503,6 +533,7 @@ function runPractice(onComplete) {
   const seq = CONFIG.practice.sequence;
   const data = [];
   let idx = 0;
+  sendTrigger(TRIG.BLOCK_PRACTICE);
 
   function next() {
     if (idx >= seq.length) { onComplete(data); return; }
@@ -518,7 +549,7 @@ function runPractice(onComplete) {
         block: 'practice', trialNum: idx + 1,
         numTargets: seq[idx], speed: CONFIG.practice.speed, ...result
       });
-      submitToSheet(data[data.length - 1]);
+      submitData(data[data.length - 1]);
       idx++;
       next();
     });
@@ -536,6 +567,7 @@ function runTest(onComplete) {
     consecutiveFloor: 0,
   };
   testData = [];
+  sendTrigger(TRIG.BLOCK_TEST);
 
   function next() {
     if (shouldStop()) { onComplete(testData); return; }
@@ -554,7 +586,7 @@ function runTest(onComplete) {
         block: 'test', trialNum, numTargets,
         speed: CONFIG.speed.fixed, reversalCount: SC.reversalCount, ...result,
       });
-      submitToSheet(testData[testData.length - 1]);
+      submitData(testData[testData.length - 1]);
       updateStaircase(result.correct);
       next();
     });

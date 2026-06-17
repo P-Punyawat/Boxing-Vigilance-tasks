@@ -89,6 +89,29 @@ function sd(arr) {
 }
 
 // ============================================================
+//  EEG guard functions — no-ops in browser, active in Electron
+// ============================================================
+
+function sendTrigger(code) {
+  if (window.eeg) window.eeg.sendTrigger(code);
+}
+
+function submitData(t) {
+  const headers = ['participant_id', 'seed', 'block', 'trial_num', 'digit',
+    'is_nogo', 'font_size_pt', 'isi_ms', 'responded', 'rt_ms', 'outcome'];
+  const values = [
+    sessionId, sessionSeed, t.block, t.trialNum, t.digit,
+    t.isNogo ? 1 : 0, t.fontSize, t.isi,
+    t.responded ? 1 : 0, t.rt !== null ? t.rt : '', t.outcome,
+  ];
+  if (window.eeg) {
+    window.eeg.saveRow('SART', sessionId, headers, values);
+  } else {
+    submitToSheet(t);
+  }
+}
+
+// ============================================================
 //  Trial generation
 // ============================================================
 
@@ -416,6 +439,7 @@ function showResults(data) {
 function runBlock(trials, isPractice, onComplete) {
   const blockData = [];
   let idx = 0;
+  sendTrigger(isPractice ? TRIG.BLOCK_PRACTICE : TRIG.BLOCK_TEST);
 
   // Full-viewport overlay — sits on top of #app
   const overlay = document.createElement('div');
@@ -436,7 +460,7 @@ function runBlock(trials, isPractice, onComplete) {
         trialNum: idx + 1,
         ...result,
       });
-      submitToSheet(blockData[blockData.length - 1]);
+      submitData(blockData[blockData.length - 1]);
       idx++;
       next();
     });
@@ -465,11 +489,13 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
   `;
 
   const trialStart = performance.now();
+  sendTrigger(trial.isNogo ? TRIG.SART_DIGIT_NOGO : TRIG.SART_DIGIT_GO);
 
   const onKey = e => {
     if ((e.code === 'Space' || e.key === ' ') && !responded && !e.repeat) {
       responded = true;
       rt = performance.now() - trialStart;
+      sendTrigger(trial.isNogo ? TRIG.SART_COMMISSION : TRIG.SART_HIT);
     }
   };
   document.addEventListener('keydown', onKey);
@@ -481,6 +507,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
       <div class="trial-counter">${trialLabel}</div>
       <div class="progress-bar" style="width:${progressPct}%"></div>
     `;
+    sendTrigger(TRIG.SART_MASK);
 
     // --- After ISI → end trial ---
     const maskTimer = setTimeout(() => {
@@ -491,6 +518,10 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
         outcome = responded ? 'commission' : 'correct_rejection';
       } else {
         outcome = responded ? 'hit' : 'omission';
+      }
+
+      if (!responded) {
+        sendTrigger(trial.isNogo ? TRIG.SART_CORRECT_REJ : TRIG.SART_OMISSION);
       }
 
       onComplete({

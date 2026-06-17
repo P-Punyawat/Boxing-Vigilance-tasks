@@ -91,6 +91,29 @@ function randomColor() {
   return COLORS[Math.floor(rng() * COLORS.length)];
 }
 
+// ============================================================
+//  EEG guard functions — no-ops in browser, active in Electron
+// ============================================================
+
+function sendTrigger(code) {
+  if (window.eeg) window.eeg.sendTrigger(code);
+}
+
+function submitData(d) {
+  const headers = ['participant_id', 'seed', 'block', 'balloon_num', 'pop_point',
+    'pumps', 'popped', 'earnings', 'permanent_bank_after'];
+  const values = [
+    sessionId, sessionSeed, d.block, d.balloonNum, d.popPoint,
+    d.pumps, d.popped ? 1 : 0,
+    d.earnings.toFixed(2), d.permanentBank.toFixed(2),
+  ];
+  if (window.eeg) {
+    window.eeg.saveRow('BART', sessionId, headers, values);
+  } else {
+    submitToSheet(d);
+  }
+}
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -397,6 +420,7 @@ function runBlock(count, isPractice, onComplete) {
   const blockData = [];
   let idx = 0;
   let permanentBank = 0;
+  sendTrigger(isPractice ? TRIG.BLOCK_PRACTICE : TRIG.BLOCK_TEST);
 
   function next() {
     if (idx >= count) {
@@ -424,7 +448,7 @@ function runBlock(count, isPractice, onComplete) {
         earnings,
         permanentBank,
       });
-      submitToSheet(blockData[blockData.length - 1]);
+      submitData(blockData[blockData.length - 1]);
       idx++;
       next();
     });
@@ -486,9 +510,11 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
     busy = true;
     disableAll();
     pumps++;
+    sendTrigger(TRIG.BART_PUMP);
 
     if (pumps >= popPoint) {
       // Balloon pops
+      sendTrigger(TRIG.BART_POP);
       playPop();
       flashScreen();
       const scaleEl = document.getElementById('b-scale');
@@ -517,6 +543,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
     if (busy || pumps === 0) return;
     busy = true;
     disableAll();
+    sendTrigger(TRIG.BART_COLLECT);
     playCashIn();
     showIntermission(overlay, false, tempEarnings(), () => finish(false));
   }
@@ -568,6 +595,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
   document.getElementById('btn-pump').addEventListener('click', doPump);
   document.getElementById('btn-collect').addEventListener('click', doCollect);
   document.addEventListener('keydown', keyHandler);
+  sendTrigger(TRIG.BART_BALLOON);
 }
 
 // ============================================================
@@ -589,6 +617,7 @@ function showIntermission(overlay, popped, amount, onDone) {
 
   setTimeout(() => {
     overlay.innerHTML = '';           // blank ITI screen
+    sendTrigger(TRIG.BART_ITI);
     setTimeout(onDone, CONFIG.timing.iti);
   }, CONFIG.timing.intermission);
 }

@@ -1,0 +1,7 @@
+{
+  "eegMode": true,
+  "serialPort": "COM3",
+  "baudRate": 115200,
+  "lslStreamName": "PsychoPy_LSL",
+  "wsPort": 8765
+}
