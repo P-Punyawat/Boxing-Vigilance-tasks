@@ -241,6 +241,8 @@ function showWelcome() {
       <h1>BART</h1>
       <p class="task-subtitle">Balloon Analogue Risk Task</p>
 
+      <div id="bart-demo" class="task-demo" style="height:200px"></div>
+
       <h2>Instructions</h2>
       <p>
         You will see a series of balloons, one at a time.
@@ -283,7 +285,56 @@ function showWelcome() {
     </div>
   `);
 
+  // --- BART demo animation ---
+  let _demoTimer = null;
+  {
+    const el    = document.getElementById('bart-demo');
+    const color = COLORS[2]; // yellow balloon for demo
+    let pumps = 0, cycleIdx = 0;
+    const limits = [5, 7]; // pumps before collect / pop (alternating)
+
+    const renderBalloon = () => {
+      const scale = (0.18 + (pumps / 10) * 0.72).toFixed(2);
+      el.innerHTML = `
+        <div style="transform:scale(${scale});transform-origin:center bottom;transition:transform 0.12s ease-out">
+          ${balloonSVG(color)}
+        </div>`;
+    };
+
+    const tick = () => {
+      const limit  = limits[cycleIdx % 2];
+      const isCollect = cycleIdx % 2 === 0;
+      if (pumps < limit) {
+        pumps++;
+        renderBalloon();
+        _demoTimer = setTimeout(tick, 340);
+      } else if (isCollect) {
+        el.innerHTML = `
+          <div style="text-align:center;font-family:'Courier New',monospace">
+            <div style="font-size:2.6rem;line-height:1">&#128176;</div>
+            <div style="color:#2ecc71;font-size:1.3rem;font-weight:bold;margin-top:0.3rem">+$2.50</div>
+            <div style="color:#555;font-size:0.65rem;letter-spacing:.1em;margin-top:0.3rem">COLLECTED</div>
+          </div>`;
+        cycleIdx++; pumps = 0;
+        _demoTimer = setTimeout(() => { renderBalloon(); _demoTimer = setTimeout(tick, 500); }, 1600);
+      } else {
+        el.innerHTML = `
+          <div style="text-align:center;font-family:'Courier New',monospace">
+            <div style="font-size:3rem;line-height:1">&#128165;</div>
+            <div style="color:#e74c3c;font-size:1rem;font-weight:bold;margin-top:0.3rem">POPPED!</div>
+            <div style="color:#555;font-size:0.65rem;letter-spacing:.1em;margin-top:0.3rem">Lost earnings</div>
+          </div>`;
+        cycleIdx++; pumps = 0;
+        _demoTimer = setTimeout(() => { renderBalloon(); _demoTimer = setTimeout(tick, 500); }, 1600);
+      }
+    };
+
+    renderBalloon();
+    _demoTimer = setTimeout(tick, 700);
+  }
+
   document.getElementById('btn-start').addEventListener('click', () => {
+    clearTimeout(_demoTimer);
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');

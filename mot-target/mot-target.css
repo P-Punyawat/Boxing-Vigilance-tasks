@@ -216,6 +216,25 @@ body {
 .back-link:hover { color: #aaa; }
 
 /* ============================================================
+   Animated instruction demo
+   ============================================================ */
+.task-demo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  margin: 1.2rem 0;
+  overflow: hidden;
+}
+.demo-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ============================================================
    MOT Trial Overlay
    ============================================================ */
 .mot-overlay {

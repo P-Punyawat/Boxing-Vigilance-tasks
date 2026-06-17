@@ -675,6 +675,10 @@ function showWelcome() {
       <h1>MOT &mdash; Capacity</h1>
       <p class="task-subtitle">Multi-Object Tracking &mdash; Target Capacity &mdash; Pylyshyn &amp; Storm, 1988</p>
 
+      <div class="task-demo">
+        <canvas id="mot-cap-demo" class="demo-canvas" width="540" height="160"></canvas>
+      </div>
+
       <h2>How it works</h2>
       <p>Ten identical circles appear in a bounding arena. A subset flashes red — those are your <strong>targets</strong>. Once highlights disappear all circles look the same and start moving. Track your targets for 5 seconds, then click the ones you were following.</p>
 
@@ -719,7 +723,114 @@ function showWelcome() {
     </div>
   `);
 
+  // --- MOT demo animation ---
+  let _demoAnimId = null;
+  {
+    const canvas = document.getElementById('mot-cap-demo');
+    const ctx    = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const DR = 13, DGAP = 8, DN = 6, DT = 2, DSPEED = 110;
+    const DMIN = 2 * DR + DGAP;
+
+    const demoPhases    = ['init', 'cue', 'track', 'response', 'feedback'];
+    const demoDurations = { init: 1500, cue: 2000, track: 3000, response: 1500, feedback: 1200 };
+    const demoLabels    = {
+      init: 'CIRCLES APPEAR', cue: 'MEMORISE TARGETS',
+      track: 'TRACK — DON\'T LOSE THEM', response: 'SELECT YOUR TARGETS', feedback: 'CORRECT!',
+    };
+
+    function demoSpawn() {
+      const objs = [];
+      let tries = 0;
+      while (objs.length < DN) {
+        if (++tries > 8000) break;
+        const x = DR + 8 + Math.random() * (W - 2 * DR - 16);
+        const y = DR + 8 + Math.random() * (H - 2 * DR - 16);
+        if (objs.some(o => Math.hypot(x - o.x, y - o.y) < DMIN)) continue;
+        const a = Math.random() * Math.PI * 2;
+        objs.push({ id: objs.length, x, y, vx: Math.cos(a) * DSPEED, vy: Math.sin(a) * DSPEED, isTarget: false, selected: false });
+      }
+      const ids = [...objs].sort(() => Math.random() - 0.5).slice(0, DT).map(o => o.id);
+      objs.forEach(o => { o.isTarget = ids.includes(o.id); });
+      return objs;
+    }
+
+    function demoStep(objs, dt) {
+      for (const o of objs) {
+        o.x += o.vx * dt; o.y += o.vy * dt;
+        if (o.x - DR < 0)  { o.x = DR;     o.vx =  Math.abs(o.vx); }
+        if (o.x + DR > W)  { o.x = W - DR;  o.vx = -Math.abs(o.vx); }
+        if (o.y - DR < 0)  { o.y = DR;      o.vy =  Math.abs(o.vy); }
+        if (o.y + DR > H)  { o.y = H - DR;  o.vy = -Math.abs(o.vy); }
+      }
+      for (let i = 0; i < objs.length; i++) {
+        for (let j = i + 1; j < objs.length; j++) {
+          const a = objs[i], b = objs[j];
+          const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+          if (d >= 2 * DR || d < 0.001) continue;
+          const nx = dx / d, ny = dy / d;
+          const rv = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+          if (rv > 0) { a.vx -= rv * nx; a.vy -= rv * ny; b.vx += rv * nx; b.vy += rv * ny; }
+          const pen = (2 * DR - d) * 0.5;
+          a.x -= nx * pen; a.y -= ny * pen; b.x += nx * pen; b.y += ny * pen;
+        }
+      }
+    }
+
+    function demoDraw(objs, phase) {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, W, H);
+      for (const o of objs) {
+        ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
+        if      (phase === 'cue'      && o.isTarget)  ctx.fillStyle = 'rgba(231,76,60,0.50)';
+        else if (phase === 'response' && o.isTarget)  ctx.fillStyle = 'rgba(58,157,229,0.50)';
+        else if (phase === 'feedback' && o.isTarget)  ctx.fillStyle = 'rgba(76,175,80,0.55)';
+        else                                           ctx.fillStyle = '#222';
+        ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
+        if      (phase === 'cue'      && o.isTarget)  { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; }
+        else if (phase === 'response' && o.isTarget)  { ctx.strokeStyle = '#3a9de5'; ctx.lineWidth = 2; }
+        else if (phase === 'feedback' && o.isTarget)  { ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2; }
+        else                                           { ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1; }
+        ctx.stroke();
+      }
+      // Phase label
+      ctx.font = 'bold 9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = phase === 'feedback' ? '#4CAF50' : '#555';
+      ctx.fillText(demoLabels[phase] || '', W / 2, H - 4);
+    }
+
+    let demoPhase = 'init', demoPhaseStart = performance.now();
+    let demoObjs = demoSpawn(), demoLastTs = null;
+
+    const demoLoop = ts => {
+      const dt      = demoLastTs === null ? 0 : Math.min((ts - demoLastTs) / 1000, 0.05);
+      demoLastTs    = ts;
+      const elapsed = ts - demoPhaseStart;
+
+      if (elapsed >= demoDurations[demoPhase]) {
+        const idx = demoPhases.indexOf(demoPhase);
+        if (idx >= demoPhases.length - 1) {
+          demoObjs = demoSpawn(); demoPhase = 'init';
+        } else {
+          demoPhase = demoPhases[idx + 1];
+          // Auto-select targets entering response phase so demo shows correct answer
+          if (demoPhase === 'response') demoObjs.forEach(o => { o.selected = o.isTarget; });
+        }
+        demoPhaseStart = ts;
+      }
+
+      if (demoPhase === 'track') demoStep(demoObjs, dt);
+      demoDraw(demoObjs, demoPhase);
+      _demoAnimId = requestAnimationFrame(demoLoop);
+    };
+    _demoAnimId = requestAnimationFrame(demoLoop);
+  }
+
   document.getElementById('btn-start').addEventListener('click', () => {
+    cancelAnimationFrame(_demoAnimId);
     participantId = document.getElementById('pid').value.trim() || 'anonymous';
     if (IS_EEG) testMode = document.querySelector('input[name="ver"]:checked').value;
     const now = new Date();

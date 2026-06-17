@@ -221,6 +221,8 @@ function showWelcome() {
       <h1>SART</h1>
       <p class="task-subtitle">Sustained Attention to Response Task &mdash; Robertson et al., 1997</p>
 
+      <div id="sart-demo" class="task-demo" style="height:150px"></div>
+
       <h2>Instructions</h2>
       <p>
         You will see a series of single digits (1–9) appear one at a time in
@@ -262,7 +264,37 @@ function showWelcome() {
     </div>
   `);
 
+  // --- SART demo animation ---
+  let _demoTimer = null;
+  {
+    const el = document.getElementById('sart-demo');
+    const seq = [
+      { digit: '7', isNogo: false },
+      { digit: '4', isNogo: false },
+      { digit: '3', isNogo: true  },
+      { digit: '2', isNogo: false },
+    ];
+    let step = 0, showMask = false;
+    const tick = () => {
+      const s = seq[step % seq.length];
+      if (!showMask) {
+        el.innerHTML = `
+          <div style="font-size:52pt;font-weight:bold;font-family:Arial,Helvetica,sans-serif;color:#fff;line-height:1">${s.digit}</div>
+          <div class="demo-label ${s.isNogo ? 'nogo' : 'go'}">${s.isNogo ? '&#x2715;&thinsp;&thinsp;hold' : '&#9654;&thinsp;&thinsp;press space'}</div>`;
+        showMask = true;
+        _demoTimer = setTimeout(tick, 900);
+      } else {
+        el.innerHTML = `<div style="opacity:0.55">${maskSVG(72)}</div>`;
+        showMask = false;
+        step++;
+        _demoTimer = setTimeout(tick, 550);
+      }
+    };
+    tick();
+  }
+
   document.getElementById('btn-start').addEventListener('click', () => {
+    clearTimeout(_demoTimer);
     const raw = document.getElementById('pid').value.trim();
     participantId = raw || 'anonymous';
     const now = new Date();
