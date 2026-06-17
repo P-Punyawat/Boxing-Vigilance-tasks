@@ -8,6 +8,8 @@
 //  Configuration
 // ============================================================
 
+const IS_EEG = !!window.eeg;
+
 const CONFIG = {
   reward: 0.50,   // $ per pump
   maxPumps: 128,    // pre-determined pop range is [1, maxPumps]
@@ -17,7 +19,7 @@ const CONFIG = {
   sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
 
   practice: { count: 2 },
-  test: { count: 30 },
+  test: { count: IS_EEG ? 30 : 20 },   // EEG: 30 balloons, Browser: 20 balloons
 
   timing: {
     pumpDelay: 150,   // ms — delay between pump click and re-enabling buttons

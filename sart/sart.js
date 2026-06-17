@@ -9,6 +9,8 @@
 //  Configuration
 // ============================================================
 
+const IS_EEG = !!window.eeg;
+
 const CONFIG = {
   digits: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   noGo: 3,
@@ -25,10 +27,10 @@ const CONFIG = {
   },
 
   test: {
-    fontSizes: [48, 72, 94, 100, 120],    // pt
-    isis: [1000, 1500, 2000],         // ms
-    // Full factorial: each digit × each fontSize × each isi = 1 trial
-    // 9 × 5 × 3 = 135 trials
+    // EEG: full factorial 9 × 5 × 3 = 135 trials (~4 min)
+    // Browser: reduced factorial 9 × 3 × 2 = 54 trials (~1.5 min)
+    fontSizes: IS_EEG ? [48, 72, 94, 100, 120] : [48, 94, 120],
+    isis:      IS_EEG ? [1000, 1500, 2000]      : [1000, 2000],
   },
 };
 
