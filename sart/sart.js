@@ -91,6 +91,38 @@ function sd(arr) {
 }
 
 // ============================================================
+//  Audio (Web Audio API — no external files needed)
+// ============================================================
+
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, startOffset, duration, type = 'sine', vol = 0.10) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    const t = ctx.currentTime + startOffset;
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t);
+    osc.stop(t + duration);
+  } catch (_) { }
+}
+
+function playTick() {
+  playTone(800, 0, 0.05, 'sine', 0.09);
+}
+
+// ============================================================
 //  EEG guard functions — no-ops in browser, active in Electron
 // ============================================================
 
@@ -497,6 +529,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
     if ((e.code === 'Space' || e.key === ' ') && !responded && !e.repeat) {
       responded = true;
       rt = performance.now() - trialStart;
+      playTick();
       sendTrigger(trial.isNogo ? TRIG.SART_COMMISSION : TRIG.SART_HIT);
     }
   };
@@ -506,6 +539,7 @@ function runTrial(trial, index, total, isPractice, container, onComplete) {
     if (!responded) {
       responded = true;
       rt = performance.now() - trialStart;
+      playTick();
       sendTrigger(trial.isNogo ? TRIG.SART_COMMISSION : TRIG.SART_HIT);
     }
   };

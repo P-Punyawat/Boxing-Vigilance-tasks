@@ -124,6 +124,43 @@ function escapeHtml(s) {
 }
 
 // ============================================================
+//  Audio (Web Audio API — no external files needed)
+// ============================================================
+
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, startOffset, duration, type = 'sine', vol = 0.10) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    const t = ctx.currentTime + startOffset;
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t);
+    osc.stop(t + duration);
+  } catch (_) { }
+}
+
+function playTick() {
+  playTone(800, 0, 0.05, 'sine', 0.09);
+}
+
+function playChing() {
+  playTone(1320, 0, 0.09, 'sine', 0.12);
+  playTone(1760, 0.07, 0.08, 'sine', 0.08);
+}
+
+// ============================================================
 //  EEG guard functions — no-ops in browser, active in Electron
 // ============================================================
 
@@ -376,7 +413,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     canvas.removeEventListener('click', onCanvasClick);
     canvas.removeEventListener('touchmove', onTouchMove);
     canvas.removeEventListener('touchend', onTouchEnd);
-    confirmBtn.removeEventListener('click', finish);
+    confirmBtn.removeEventListener('click', onConfirm);
 
     const selectedIds = [...selected];
     const targetIds = objs.filter(o => o.isTarget).map(o => o.id);
@@ -434,6 +471,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const { x, y } = canvasXY(e);
     const o = circleAt(x, y);
     if (!o) return;
+    playTick();
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
     else { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
@@ -457,17 +495,20 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const { x, y } = canvasXY(touch);
     const o = circleAt(x, y);
     if (!o) return;
+    playTick();
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
     else { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
 
+  function onConfirm() { playChing(); finish(); }
+
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('click', onCanvasClick);
   canvas.addEventListener('touchmove', onTouchMove, { passive: false });
   canvas.addEventListener('touchend', onTouchEnd, { passive: false });
-  confirmBtn.addEventListener('click', finish);
+  confirmBtn.addEventListener('click', onConfirm);
 
   let lastTs = null;
 
