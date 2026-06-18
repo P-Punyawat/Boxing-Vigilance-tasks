@@ -194,19 +194,13 @@ function render(html) {
 
 // Mask SVG — X inside circle (scaled to ~1.4× largest font to stay consistent)
 function maskSVG(size = 160) {
-  const r = 44;
-  const cx = 50;
-  const cy = 50;
-  const pad = 28;
   return `
     <svg width="${size}" height="${size}" viewBox="0 0 100 100"
          xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="${cx}" cy="${cy}" r="${r}"
-              stroke="#ffffff" stroke-width="4" fill="none"/>
-      <line x1="${pad}" y1="${pad}" x2="${100 - pad}" y2="${100 - pad}"
-            stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
-      <line x1="${100 - pad}" y1="${pad}" x2="${pad}" y2="${100 - pad}"
-            stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+      <line x1="50" y1="20" x2="50" y2="80"
+            stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+      <line x1="20" y1="50" x2="80" y2="50"
+            stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
     </svg>`;
 }
 
