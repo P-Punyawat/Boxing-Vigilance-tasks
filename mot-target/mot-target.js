@@ -475,7 +475,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     if (!o) return;
     playTick();
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
-    else { selected.add(o.id); o.selected = true; }
+    else if (selected.size < numTargets) { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
@@ -499,7 +499,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     if (!o) return;
     playTick();
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
-    else { selected.add(o.id); o.selected = true; }
+    else if (selected.size < numTargets) { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
     confirmBtn.disabled = selected.size !== numTargets;
   }
