@@ -12,7 +12,7 @@ const IS_EEG = !!window.eeg;
 
 const CONFIG = {
   reward: 0.50,   // $ per pump
-  maxPumps: 128,    // pre-determined pop range is [1, maxPumps]
+  maxPumps: 32,    // pre-determined pop range is [1, maxPumps]
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
@@ -290,7 +290,7 @@ function showWelcome() {
   // --- BART demo animation ---
   let _demoTimer = null;
   {
-    const el    = document.getElementById('bart-demo');
+    const el = document.getElementById('bart-demo');
     const color = COLORS[2]; // yellow balloon for demo
     let pumps = 0, cycleIdx = 0;
     const limits = [5, 7]; // pumps before collect / pop (alternating)
@@ -304,7 +304,7 @@ function showWelcome() {
     };
 
     const tick = () => {
-      const limit  = limits[cycleIdx % 2];
+      const limit = limits[cycleIdx % 2];
       const isCollect = cycleIdx % 2 === 0;
       if (pumps < limit) {
         pumps++;
@@ -416,7 +416,7 @@ function showResults(data) {
       adjAvgPumps: adjAvg !== null ? adjAvg : 0,
       completedAt: Date.now(),
     }));
-  } catch (_) {}
+  } catch (_) { }
 
   const popClass = popped.length <= 5 ? 'color-good'
     : popped.length <= 12 ? 'color-warn'
