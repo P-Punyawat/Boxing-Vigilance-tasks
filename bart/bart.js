@@ -103,11 +103,13 @@ function sendTrigger(code) {
 
 function submitData(d) {
   const headers = ['participant_id', 'seed', 'block', 'balloon_num', 'pop_point',
-    'pumps', 'popped', 'earnings', 'permanent_bank_after'];
+    'pumps', 'popped', 'earnings', 'permanent_bank_after', 'pump_rts_ms', 'collect_rt_ms'];
   const values = [
     sessionId, sessionSeed, d.block, d.balloonNum, d.popPoint,
     d.pumps, d.popped ? 1 : 0,
     d.earnings.toFixed(2), d.permanentBank.toFixed(2),
+    (d.pumpRTs || []).join(';'),
+    d.collectRt !== null && d.collectRt !== undefined ? d.collectRt : '',
   ];
   if (window.eeg) {
     window.eeg.saveRow('BART', sessionId, headers, values);
@@ -513,6 +515,8 @@ function runBlock(count, isPractice, onComplete) {
         popped: result.popped,
         earnings,
         permanentBank,
+        pumpRTs: result.pumpRTs,
+        collectRt: result.collectRt,
       });
       submitData(blockData[blockData.length - 1]);
       idx++;
@@ -530,6 +534,9 @@ function runBlock(count, isPractice, onComplete) {
 function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, onComplete) {
   let pumps = 0;
   let busy = false;   // debounce — prevents double-clicks and key spam
+  let decisionStart = null;
+  let pumpRTs = [];
+  let collectRt = null;
 
   // Full-viewport overlay
   const overlay = document.createElement('div');
@@ -566,13 +573,14 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
   function finish(popped) {
     document.removeEventListener('keydown', keyHandler);
     overlay.remove();
-    onComplete({ pumps, popped, popPoint });
+    onComplete({ pumps, popped, popPoint, pumpRTs, collectRt });
   }
 
   // ---- Pump action ----
 
   function doPump() {
     if (busy) return;
+    if (decisionStart !== null) pumpRTs.push(Math.round(performance.now() - decisionStart));
     busy = true;
     disableAll();
     pumps++;
@@ -599,6 +607,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
         const c = document.getElementById('btn-collect');
         if (p) p.disabled = false;
         if (c) c.disabled = false;
+        decisionStart = performance.now();
       }, CONFIG.timing.pumpDelay);
     }
   }
@@ -607,6 +616,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
 
   function doCollect() {
     if (busy || pumps === 0) return;
+    if (decisionStart !== null) collectRt = Math.round(performance.now() - decisionStart);
     busy = true;
     disableAll();
     sendTrigger(TRIG.BART_COLLECT);
@@ -662,6 +672,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
   document.getElementById('btn-collect').addEventListener('click', doCollect);
   document.addEventListener('keydown', keyHandler);
   sendTrigger(TRIG.BART_BALLOON);
+  decisionStart = performance.now();
 }
 
 // ============================================================
@@ -705,6 +716,8 @@ function submitToSheet(d) {
     sessionId, sessionSeed,
     d.block, d.balloonNum, d.popPoint, d.pumps,
     d.popped ? 1 : 0, d.earnings.toFixed(2), d.permanentBank.toFixed(2),
+    (d.pumpRTs || []).join(';'),
+    d.collectRt !== null && d.collectRt !== undefined ? d.collectRt : '',
   ];
   const body = new FormData();
   body.append('sheet', 'BART Data');
@@ -719,7 +732,7 @@ function submitToSheet(d) {
 function exportCSV(data) {
   const headers = [
     'participant_id', 'seed', 'block', 'balloon_num', 'pop_point',
-    'pumps', 'popped', 'earnings', 'permanent_bank_after',
+    'pumps', 'popped', 'earnings', 'permanent_bank_after', 'pump_rts_ms', 'collect_rt_ms',
   ];
 
   const rows = data.map(d => [
@@ -731,6 +744,8 @@ function exportCSV(data) {
     d.popped ? 1 : 0,
     d.earnings.toFixed(2),
     d.permanentBank.toFixed(2),
+    (d.pumpRTs || []).join(';'),
+    d.collectRt !== null && d.collectRt !== undefined ? d.collectRt : '',
   ]);
 
   const csv = [headers, ...rows].map(r => r.join(',')).join('\r\n');
