@@ -11,7 +11,7 @@
 const IS_EEG = !!window.eeg;
 
 const CONFIG = {
-  reward: 0.50,   // $ per pump
+  reward: 1.00,   // $ per pump
   maxPumps: 32,    // pre-determined pop range is [1, maxPumps]
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
