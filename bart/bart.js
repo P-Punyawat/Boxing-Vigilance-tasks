@@ -236,7 +236,7 @@ function render(html) {
 
 function showWelcome() {
   render(`
-    <a class="back-link" href="../">&#8592; Back</a>
+    <a class="back-link" href="../index.html">&#8592; Back</a>
     <div class="screen instructions">
       <h1>BART</h1>
       <p class="task-subtitle">Balloon Analogue Risk Task</p>
@@ -455,10 +455,10 @@ function showResults(data) {
       <div class="btn-group">
         <button class="btn" id="btn-download">Download CSV</button>
         <button class="btn btn-outline" id="btn-restart">Restart</button>
-        <a class="btn btn-outline" href="../">Task Selection</a>
+        <a class="btn btn-outline" href="../index.html">Task Selection</a>
       </div>
       <p style="text-align:center;margin-top:1.2rem">
-        <a href="../scorecard/?pid=${escapeHtml(participantId)}"
+        <a href="../scorecard/index.html?pid=${escapeHtml(participantId)}"
            style="color:#3a7bd5;font-size:0.8rem;text-decoration:none;letter-spacing:0.06em">
           View Performance Report →
         </a>

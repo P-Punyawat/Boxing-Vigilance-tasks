@@ -285,7 +285,7 @@ function renderScorecard(pid, data, scores) {
     : `<span class="badge badge-pending">Raw estimates — normative baseline pending</span>`;
 
   app.innerHTML = `
-    <a class="back-link" href="../">← Task Menu</a>
+    <a class="back-link" href="../index.html">← Task Menu</a>
     <div class="screen scorecard-screen">
       <h1>Performance Report</h1>
       <p class="task-subtitle">Participant: ${escapeHtml(pid)}</p>
@@ -316,7 +316,7 @@ function renderScorecard(pid, data, scores) {
       ${scores.allDone ? rawMetricsHTML(data) : ''}
 
       <div class="btn-group">
-        <a class="btn btn-outline" href="../">← Task Menu</a>
+        <a class="btn btn-outline" href="../index.html">← Task Menu</a>
       </div>
     </div>`;
 
