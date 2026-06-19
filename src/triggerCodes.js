@@ -28,7 +28,8 @@ const TRIG = {
   MOT_CUE:             31,   // targets flash red
   MOT_TRACK:           32,   // motion begins
   MOT_RESPONSE:        33,   // motion freezes — select targets
-  MOT_CONFIRM:         34,   // confirm button pressed (or timeout)
-  MOT_CORRECT:         35,   // correct selection
-  MOT_INCORRECT:       36,   // incorrect selection
+  MOT_SELECT:          34,   // circle tapped during response phase
+  MOT_CONFIRM:         35,   // confirm button pressed (or timeout)
+  MOT_CORRECT:         36,   // correct selection
+  MOT_INCORRECT:       37,   // incorrect selection
 };

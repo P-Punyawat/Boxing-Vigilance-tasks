@@ -154,28 +154,57 @@ function playTone(freq, startOffset, duration, type = 'sine', vol = 0.12) {
   } catch (_) { }
 }
 
-function playChing() {
-  // Quick two-note ding
-  playTone(1320, 0, 0.09, 'sine', 0.12);
-  playTone(1760, 0.07, 0.08, 'sine', 0.08);
-}
-
-function playPop() {
-  // Burst of white noise
+function playPump(pumps, maxPumps) {
   try {
     const ctx = getAudioCtx();
-    const frames = Math.floor(ctx.sampleRate * 0.14);
+    const t = ctx.currentTime;
+    const ratio = pumps / maxPumps;
+
+    const frames = Math.floor(ctx.sampleRate * 0.20);
+    const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 180 + ratio * 700;  // 180 Hz → 880 Hz as balloon fills
+    filter.Q.value = 1.8;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0, t);
+    gain.gain.linearRampToValueAtTime(0.45, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.20);
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(t);
+    src.stop(t + 0.20);
+  } catch (_) { }
+}
+
+function playPop(pumps, maxPumps) {
+  try {
+    const ctx = getAudioCtx();
+    const ratio = pumps / maxPumps;
+    const vol = 0.3 + ratio * 0.7;   // 0.3 → 1.0 based on balloon size
+    const duration = 0.12 + ratio * 0.18;  // bigger balloon = longer burst
+
+    const frames = Math.floor(ctx.sampleRate * duration);
     const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < frames; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / frames) * 0.5;
+      data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
     }
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
     src.buffer = buf;
     src.connect(gain);
     gain.connect(ctx.destination);
-    gain.gain.value = 0.6;
+    gain.gain.value = vol;
     src.start();
   } catch (_) { }
 }
@@ -589,7 +618,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
     if (pumps >= popPoint) {
       // Balloon pops
       sendTrigger(TRIG.BART_POP);
-      playPop();
+      playPop(pumps, CONFIG.maxPumps);
       flashScreen();
       const scaleEl = document.getElementById('b-scale');
       if (scaleEl) scaleEl.innerHTML = poppedSVG();
@@ -598,7 +627,7 @@ function runBalloon({ num, total, popPoint, color, isPractice, permanentBank }, 
 
     } else {
       // Successful pump — animate and re-enable
-      playChing();
+      playPump(pumps, CONFIG.maxPumps);
       updateUI();
 
       setTimeout(() => {

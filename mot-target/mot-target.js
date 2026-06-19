@@ -36,7 +36,7 @@ const CONFIG = {
   },
 
   practice: {
-    sequence: [1, 1, 2, 2, 3, 3, 4, 4],
+    sequence: [1, 2, 3, 4],
     totalObjects: 8,
     speed: 200,
   },
@@ -474,6 +474,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const o = circleAt(x, y);
     if (!o) return;
     playTick();
+    sendTrigger(TRIG.MOT_SELECT);
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
     else if (selected.size < numTargets) { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
@@ -498,6 +499,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     const o = circleAt(x, y);
     if (!o) return;
     playTick();
+    sendTrigger(TRIG.MOT_SELECT);
     if (selected.has(o.id)) { selected.delete(o.id); o.selected = false; }
     else if (selected.size < numTargets) { selected.add(o.id); o.selected = true; }
     selEl.textContent = `${selected.size} / ${numTargets} selected`;
@@ -727,14 +729,14 @@ function showWelcome() {
   let _demoAnimId = null;
   {
     const canvas = document.getElementById('mot-cap-demo');
-    const ctx    = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const DR = 13, DGAP = 8, DN = 6, DT = 2, DSPEED = 110;
     const DMIN = 2 * DR + DGAP;
 
-    const demoPhases    = ['init', 'cue', 'track', 'response', 'feedback'];
+    const demoPhases = ['init', 'cue', 'track', 'response', 'feedback'];
     const demoDurations = { init: 1500, cue: 2000, track: 3000, response: 1500, feedback: 1200 };
-    const demoLabels    = {
+    const demoLabels = {
       init: 'CIRCLES APPEAR', cue: 'MEMORISE TARGETS',
       track: 'TRACK — DON\'T LOSE THEM', response: 'SELECT YOUR TARGETS', feedback: 'CORRECT!',
     };
@@ -758,10 +760,10 @@ function showWelcome() {
     function demoStep(objs, dt) {
       for (const o of objs) {
         o.x += o.vx * dt; o.y += o.vy * dt;
-        if (o.x - DR < 0)  { o.x = DR;     o.vx =  Math.abs(o.vx); }
-        if (o.x + DR > W)  { o.x = W - DR;  o.vx = -Math.abs(o.vx); }
-        if (o.y - DR < 0)  { o.y = DR;      o.vy =  Math.abs(o.vy); }
-        if (o.y + DR > H)  { o.y = H - DR;  o.vy = -Math.abs(o.vy); }
+        if (o.x - DR < 0) { o.x = DR; o.vx = Math.abs(o.vx); }
+        if (o.x + DR > W) { o.x = W - DR; o.vx = -Math.abs(o.vx); }
+        if (o.y - DR < 0) { o.y = DR; o.vy = Math.abs(o.vy); }
+        if (o.y + DR > H) { o.y = H - DR; o.vy = -Math.abs(o.vy); }
       }
       for (let i = 0; i < objs.length; i++) {
         for (let j = i + 1; j < objs.length; j++) {
@@ -782,16 +784,16 @@ function showWelcome() {
       ctx.fillRect(0, 0, W, H);
       for (const o of objs) {
         ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
-        if      (phase === 'cue'      && o.isTarget)  ctx.fillStyle = 'rgba(231,76,60,0.50)';
-        else if (phase === 'response' && o.isTarget)  ctx.fillStyle = 'rgba(58,157,229,0.50)';
-        else if (phase === 'feedback' && o.isTarget)  ctx.fillStyle = 'rgba(76,175,80,0.55)';
-        else                                           ctx.fillStyle = '#222';
+        if (phase === 'cue' && o.isTarget) ctx.fillStyle = 'rgba(231,76,60,0.50)';
+        else if (phase === 'response' && o.isTarget) ctx.fillStyle = 'rgba(58,157,229,0.50)';
+        else if (phase === 'feedback' && o.isTarget) ctx.fillStyle = 'rgba(76,175,80,0.55)';
+        else ctx.fillStyle = '#222';
         ctx.fill();
         ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
-        if      (phase === 'cue'      && o.isTarget)  { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; }
-        else if (phase === 'response' && o.isTarget)  { ctx.strokeStyle = '#3a9de5'; ctx.lineWidth = 2; }
-        else if (phase === 'feedback' && o.isTarget)  { ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2; }
-        else                                           { ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1; }
+        if (phase === 'cue' && o.isTarget) { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; }
+        else if (phase === 'response' && o.isTarget) { ctx.strokeStyle = '#3a9de5'; ctx.lineWidth = 2; }
+        else if (phase === 'feedback' && o.isTarget) { ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2; }
+        else { ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1; }
         ctx.stroke();
       }
       // Phase label
@@ -806,8 +808,8 @@ function showWelcome() {
     let demoObjs = demoSpawn(), demoLastTs = null;
 
     const demoLoop = ts => {
-      const dt      = demoLastTs === null ? 0 : Math.min((ts - demoLastTs) / 1000, 0.05);
-      demoLastTs    = ts;
+      const dt = demoLastTs === null ? 0 : Math.min((ts - demoLastTs) / 1000, 0.05);
+      demoLastTs = ts;
       const elapsed = ts - demoPhaseStart;
 
       if (elapsed >= demoDurations[demoPhase]) {
@@ -900,7 +902,7 @@ function showResults(data) {
       accuracy: nCorrect / data.length,
       completedAt: Date.now(),
     }));
-  } catch (_) {}
+  } catch (_) { }
   const modeLabel = testMode === 'adaptive'
     ? `Stopped at ${SC.reversalCount} reversals`
     : `Fixed 40-trial test`;
