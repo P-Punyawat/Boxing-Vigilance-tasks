@@ -712,7 +712,7 @@ function showWelcome() {
       </div>` : ''}
 
       <h2>Practice</h2>
-      <p>8 practice trials (1 → 4 targets, 8 circles) run first at a slower speed so you can learn the task.</p>
+      <p>${CONFIG.practice.sequence.length} practice trials (${CONFIG.practice.sequence[0]} → ${CONFIG.practice.sequence[CONFIG.practice.sequence.length - 1]} targets, ${CONFIG.practice.totalObjects} circles) run first at a slower speed so you can learn the task.</p>
 
       <div class="input-group">
         <label for="pid">Participant ID</label>

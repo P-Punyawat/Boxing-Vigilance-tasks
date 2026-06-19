@@ -243,8 +243,8 @@ function showWelcome() {
 
       <ul>
         <li>Digits will vary in size — this is intentional.</li>
-        <li>One practice round (18 trials) comes first, with feedback.</li>
-        <li>The main task has 135 trials (~3.5 minutes).</li>
+        <li>One practice round (${CONFIG.digits.length * CONFIG.practice.repsPerDigit} trials) comes first, with feedback.</li>
+        <li>The main task has ${CONFIG.digits.length * CONFIG.test.fontSizes.length * CONFIG.test.isis.length} trials.</li>
       </ul>
 
       <div class="input-group">

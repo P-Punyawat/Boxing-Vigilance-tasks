@@ -283,7 +283,7 @@ function showWelcome() {
       <div class="rule-box">
         <p>
           <strong>PUMP <span class="key-hint">Space</span></strong> &mdash;
-          Inflate the balloon and add <strong>$0.05</strong> to your
+          Inflate the balloon and add <strong>${fmt(CONFIG.reward)}</strong> to your
           temporary earnings. The balloon might pop!
         </p>
         <p style="margin-top:0.6rem">
@@ -299,8 +299,8 @@ function showWelcome() {
       </p>
 
       <ul>
-        <li>2 practice balloons come first.</li>
-        <li>The main task has 30 balloons.</li>
+        <li>${CONFIG.practice.count} practice balloons come first.</li>
+        <li>The main task has ${CONFIG.test.count} balloons.</li>
         <li>Try to earn as much as possible!</li>
       </ul>
 
