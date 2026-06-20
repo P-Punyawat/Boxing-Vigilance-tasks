@@ -1,14 +1,39 @@
 {
-  "_note": "Populate means and SDs from normative sample CSV analysis. Set values to null to show raw estimates instead of percentiles.",
+  "_note": "Auto-computed from normative sample (n={\"sart\":13,\"bart\":13,\"mot\":12}). Lower/higher_is_better preserved.",
+  "_n": {
+    "sart": 13,
+    "bart": 13,
+    "mot": 12
+  },
   "sart": {
-    "commission_rate": { "mean": null, "sd": null, "lower_is_better": true },
-    "rt_cv":           { "mean": null, "sd": null, "lower_is_better": true }
+    "commission_rate": {
+      "mean": 0.39743589743589747,
+      "sd": 0.33705190787768674,
+      "lower_is_better": true
+    },
+    "rt_cv": {
+      "mean": 0.21495686586988252,
+      "sd": 0.0673877686214015,
+      "lower_is_better": true
+    }
   },
   "bart": {
-    "adj_avg_pumps":   { "mean": null, "sd": null, "lower_is_better": false }
+    "adj_avg_pumps": {
+      "mean": 20.313355234509082,
+      "sd": 16.68858822986749,
+      "lower_is_better": false
+    }
   },
   "mot": {
-    "k_value":         { "mean": null, "sd": null, "lower_is_better": false },
-    "accuracy":        { "mean": null, "sd": null, "lower_is_better": false }
+    "k_value": {
+      "mean": 2.9583333333333335,
+      "sd": 1.0543919689766346,
+      "lower_is_better": false
+    },
+    "accuracy": {
+      "mean": 0.6940944730256325,
+      "sd": 0.036588296395807796,
+      "lower_is_better": false
+    }
   }
 }

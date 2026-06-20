@@ -18,7 +18,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbxwkAHw9wkAeUrxuJZRIskIExZqVsSPrUhgnZVA_FbuN3IFbqZ-zZ4kZibU2j1L019pAQ/exec',
 
   practice: {
     repsPerDigit: 2,              // each digit appears this many times
@@ -30,7 +30,7 @@ const CONFIG = {
     // EEG: full factorial 9 × 5 × 3 = 135 trials (~4 min)
     // Browser: reduced factorial 9 × 3 × 2 = 54 trials (~1.5 min)
     fontSizes: IS_EEG ? [48, 72, 94, 100, 120] : [48, 94, 120],
-    isis:      IS_EEG ? [1000, 1500, 2000]      : [1000, 2000],
+    isis: IS_EEG ? [1000, 1500, 2000] : [1000, 2000],
   },
 };
 
@@ -265,7 +265,7 @@ function showWelcome() {
     const seq = [
       { digit: '7', isNogo: false },
       { digit: '4', isNogo: false },
-      { digit: '3', isNogo: true  },
+      { digit: '3', isNogo: true },
       { digit: '2', isNogo: false },
     ];
     let step = 0, showMask = false;
@@ -433,7 +433,7 @@ function showResults(data) {
       rtCV: s.sdRT !== null && s.meanRT ? s.sdRT / s.meanRT : null,
       completedAt: Date.now(),
     }));
-  } catch (_) {}
+  } catch (_) { }
 
   const commClass = s.commissionErrors <= 2 ? 'color-good'
     : s.commissionErrors <= 5 ? 'color-warn'

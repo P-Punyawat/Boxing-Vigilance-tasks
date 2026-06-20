@@ -11,7 +11,7 @@
 const IS_EEG = !!window.eeg;
 
 const CONFIG = {
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbxwkAHw9wkAeUrxuJZRIskIExZqVsSPrUhgnZVA_FbuN3IFbqZ-zZ4kZibU2j1L019pAQ/exec',
 
   arena: { w: 700, h: 480 },
   circle: { r: 20 },   // slightly smaller to fit 10 circles

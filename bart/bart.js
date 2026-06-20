@@ -16,7 +16,7 @@ const CONFIG = {
 
   // Paste your deployed Apps Script URL here to enable automatic sheet submission.
   // Leave empty ('') to disable — CSV download will still work.
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbwO3gf4P2AfJadqalq4vgIc3ljNo1OHSvsOvUmlur0FMGm_qphbOwa4BzJYIKAw0GemSQ/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbxwkAHw9wkAeUrxuJZRIskIExZqVsSPrUhgnZVA_FbuN3IFbqZ-zZ4kZibU2j1L019pAQ/exec',
 
   practice: { count: 2 },
   test: { count: IS_EEG ? 30 : 20 },   // EEG: 30 balloons, Browser: 20 balloons
