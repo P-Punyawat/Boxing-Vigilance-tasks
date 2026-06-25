@@ -240,7 +240,7 @@ body {
 .mot-overlay {
   position: fixed;
   inset: 0;
-  background: #1a1a1a;
+  background: #111111;
   display: flex;
   flex-direction: column;
   align-items: center;

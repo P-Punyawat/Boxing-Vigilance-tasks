@@ -259,7 +259,7 @@ function drawArena(ctx, objs, phase, hoveredId) {
   const { w, h } = CONFIG.arena;
   const r = CONFIG.circle.r;
 
-  ctx.fillStyle = '#1a1a1a';
+  ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, w, h);
 
   for (const o of objs) {
@@ -267,24 +267,24 @@ function drawArena(ctx, objs, phase, hoveredId) {
 
     ctx.beginPath();
     ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
-    if (phase === 'cue' && o.isTarget) ctx.fillStyle = 'rgba(231,76,60,0.55)';
-    else if (phase === 'response' && o.selected) ctx.fillStyle = 'rgba(58,157,229,0.55)';
-    else if (phase === 'response' && hov) ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    else if (phase === 'feedback' && o.isTarget && o.selected) ctx.fillStyle = 'rgba(76,175,80,0.55)';
-    else if (phase === 'feedback' && o.isTarget && !o.selected) ctx.fillStyle = 'rgba(244,67,54,0.55)';
-    else if (phase === 'feedback' && !o.isTarget && o.selected) ctx.fillStyle = 'rgba(255,193,7,0.45)';
-    else ctx.fillStyle = '#242424';
+    if (phase === 'cue' && o.isTarget) ctx.fillStyle = '#c0392b';
+    else if (phase === 'response' && o.selected) ctx.fillStyle = '#1a6da8';
+    else if (phase === 'response' && hov) ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    else if (phase === 'feedback' && o.isTarget && o.selected) ctx.fillStyle = '#2e7d32';
+    else if (phase === 'feedback' && o.isTarget && !o.selected) ctx.fillStyle = '#b71c1c';
+    else if (phase === 'feedback' && !o.isTarget && o.selected) ctx.fillStyle = '#e65100';
+    else ctx.fillStyle = '#111111';
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
-    if (phase === 'cue' && o.isTarget) { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; }
-    else if (phase === 'response' && o.selected) { ctx.strokeStyle = '#3a9de5'; ctx.lineWidth = 3; }
-    else if (phase === 'response' && hov) { ctx.strokeStyle = '#999'; ctx.lineWidth = 2; }
-    else if (phase === 'feedback' && o.isTarget && o.selected) { ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 3; }
-    else if (phase === 'feedback' && o.isTarget && !o.selected) { ctx.strokeStyle = '#f44336'; ctx.lineWidth = 3; }
-    else if (phase === 'feedback' && !o.isTarget && o.selected) { ctx.strokeStyle = '#FFC107'; ctx.lineWidth = 2; }
-    else { ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = 1.5; }
+    if (phase === 'cue' && o.isTarget) { ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 4; }
+    else if (phase === 'response' && o.selected) { ctx.strokeStyle = '#5ab0f0'; ctx.lineWidth = 4; }
+    else if (phase === 'response' && hov) { ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 2.5; }
+    else if (phase === 'feedback' && o.isTarget && o.selected) { ctx.strokeStyle = '#66bb6a'; ctx.lineWidth = 4; }
+    else if (phase === 'feedback' && o.isTarget && !o.selected) { ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 4; }
+    else if (phase === 'feedback' && !o.isTarget && o.selected) { ctx.strokeStyle = '#ffca28'; ctx.lineWidth = 3; }
+    else { ctx.strokeStyle = '#c0c0c0'; ctx.lineWidth = 3; }
     ctx.stroke();
   }
 
@@ -331,7 +331,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     <div class="mot-bottom">
       <div class="mot-selection" id="mot-sel"></div>
       <div class="mot-timer-wrap"><div class="mot-timer" id="mot-timer"></div></div>
-      <button class="btn confirm-btn" id="btn-confirm" disabled style="display:none">Confirm</button>
+      <button class="btn confirm-btn" id="btn-confirm" disabled style="visibility:hidden">Confirm</button>
     </div>
   `;
 
@@ -428,7 +428,7 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     objs.forEach(o => { o.selected = selected.has(o.id); });
     phase = 'feedback';
     phaseEl.textContent = PHASE_LABELS.feedback;
-    confirmBtn.style.display = 'none';
+    confirmBtn.style.visibility = 'hidden';
     selEl.textContent = '';
     timerEl.style.width = '0%';
     drawArena(ctx, objs, 'feedback', -1);
@@ -450,11 +450,11 @@ function runTrial({ numTargets, speed, totalObjects, isPractice, trialNum, total
     if (p === 'response') {
       selected.clear();
       selEl.textContent = `0 / ${numTargets} selected`;
-      confirmBtn.style.display = 'inline-block';
+      confirmBtn.style.visibility = 'visible';
       confirmBtn.disabled = true;
       timerEl.style.background = '#e67e22';
     } else {
-      confirmBtn.style.display = 'none';
+      confirmBtn.style.visibility = 'hidden';
       selEl.textContent = '';
       timerEl.style.background = '#3a7bd5';
     }
@@ -780,20 +780,20 @@ function showWelcome() {
     }
 
     function demoDraw(objs, phase) {
-      ctx.fillStyle = '#1a1a1a';
+      ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, W, H);
       for (const o of objs) {
         ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
-        if (phase === 'cue' && o.isTarget) ctx.fillStyle = 'rgba(231,76,60,0.50)';
-        else if (phase === 'response' && o.isTarget) ctx.fillStyle = 'rgba(58,157,229,0.50)';
-        else if (phase === 'feedback' && o.isTarget) ctx.fillStyle = 'rgba(76,175,80,0.55)';
-        else ctx.fillStyle = '#222';
+        if (phase === 'cue' && o.isTarget) ctx.fillStyle = '#c0392b';
+        else if (phase === 'response' && o.isTarget) ctx.fillStyle = '#1a6da8';
+        else if (phase === 'feedback' && o.isTarget) ctx.fillStyle = '#2e7d32';
+        else ctx.fillStyle = '#111111';
         ctx.fill();
         ctx.beginPath(); ctx.arc(o.x, o.y, DR, 0, Math.PI * 2);
-        if (phase === 'cue' && o.isTarget) { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; }
-        else if (phase === 'response' && o.isTarget) { ctx.strokeStyle = '#3a9de5'; ctx.lineWidth = 2; }
-        else if (phase === 'feedback' && o.isTarget) { ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2; }
-        else { ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1; }
+        if (phase === 'cue' && o.isTarget) { ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 2.5; }
+        else if (phase === 'response' && o.isTarget) { ctx.strokeStyle = '#5ab0f0'; ctx.lineWidth = 2.5; }
+        else if (phase === 'feedback' && o.isTarget) { ctx.strokeStyle = '#66bb6a'; ctx.lineWidth = 2.5; }
+        else { ctx.strokeStyle = '#c0c0c0'; ctx.lineWidth = 2; }
         ctx.stroke();
       }
       // Phase label
